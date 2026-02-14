@@ -37,6 +37,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'users.apps.UsersConfig',
+    'events',
+    'venues',
+    'bookings',
+    'hires',
+    'payments'
 ]
 
 MIDDLEWARE = [
@@ -74,8 +80,12 @@ WSGI_APPLICATION = 'EventMarket.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',   # ← именно так в новых версиях
+        'NAME': 'EventMarket',                           # имя базы, которое создал
+        'USER': 'postgres',
+        'PASSWORD': '123',
+        'HOST': 'localhost',                         # или '127.0.0.1'
+        'PORT': '5432',
     }
 }
 
@@ -120,3 +130,5 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = 'users.BaseUser'
