@@ -26,12 +26,12 @@ class Hire(models.Model):
         verbose_name=_("специалист")
     )
 
-    event = models.ForeignKey(
-        'events.Event',
-        on_delete=models.PROTECT,
-        related_name='hires',
-        verbose_name=_("заказчик / организатор")
-    )
+    # renter = models.ForeignKey(
+    #     'events.Event',
+    #     on_delete=models.PROTECT,
+    #     related_name='hires',
+    #     verbose_name=_("заказчик / организатор")
+    # )
 
     # Период работы специалиста
     start_datetime = models.DateTimeField(_("начало работы"))

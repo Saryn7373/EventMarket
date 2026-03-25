@@ -10,8 +10,8 @@ class HireAdmin(admin.ModelAdmin):
     list_display = [
         'short_id',
         'event_title',
-        # 'specialist_name',
-        'renter_email',
+        'specialist_email',
+        # 'renter_email',
         'colored_status',
         'start_datetime',
         'duration_display',
@@ -25,7 +25,7 @@ class HireAdmin(admin.ModelAdmin):
         'status',
         'created_at',
         'specialist',
-        'renter',
+        'event',
     ]
     
     search_fields = [
@@ -33,7 +33,7 @@ class HireAdmin(admin.ModelAdmin):
         'specialist__user__email',
         'specialist__user__first_name',
         'specialist__user__last_name',
-        'renter__user__email',
+        # 'renter__user__email',
     ]
     
     date_hierarchy = 'start_datetime'
@@ -42,7 +42,7 @@ class HireAdmin(admin.ModelAdmin):
     
     fieldsets = (
         (None, {
-            'fields': ('event', 'specialist', 'renter')
+            'fields': ('event', 'specialist')
         }),
         ('Период работы', {
             'fields': ('start_datetime', 'end_datetime', 'duration_hours')
@@ -73,18 +73,17 @@ class HireAdmin(admin.ModelAdmin):
             return format_html('<a href="{}">{}</a>', url, obj.event.title or '(без названия)')
         return '—'
     
-    # @admin.display(description='Специалист')
-    # def specialist_name(self, obj):
-    #     if obj.specialist and obj.specialist.user:
-    #         full_name = f"{obj.specialist.user.first_name or ''} {obj.specialist.user.last_name or ''}".strip()
-    #         return full_name or obj.specialist.user.email
-    #     return '—'
-    
-    @admin.display(description='Заказчик')
-    def renter_email(self, obj):
-        if obj.renter and obj.renter.user:
-            return obj.renter.user.email
+    @admin.display(description='Специалист')
+    def specialist_email(self, obj):
+        if obj.specialist and obj.specialist.user:
+            return obj.specialist.user.email
         return '—'
+    
+    # @admin.display(description='Заказчик')
+    # def renter_email(self, obj):
+    #     if obj.renter and obj.renter.user:
+    #         return obj.renter.user.email
+    #     return '—'
     
     @admin.display(description='Статус', ordering='status')
     def colored_status(self, obj):
@@ -126,5 +125,5 @@ class HireAdmin(admin.ModelAdmin):
         return qs.select_related(
             'event',
             'specialist__user',
-            'renter__user'
+            # 'renter__user'
         )

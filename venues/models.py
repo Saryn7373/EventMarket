@@ -5,6 +5,8 @@ from django.conf import settings
 from autoslug import AutoSlugField
 import uuid
 
+def venue_slugify(value):
+    return value.lower().replace(' ', '-')
 
 class Venue(models.Model):
     """
@@ -19,8 +21,14 @@ class Venue(models.Model):
     )
 
     name = models.CharField(_("название площадки"), max_length=200)
-    slug = AutoSlugField(_("slug"), max_length=250, unique=True, help_text="для URL, например: loft-na-pokrovke", slugify=lambda value: value.lower().replace(' ', '-'),  
-        always_update=False,)
+    slug = AutoSlugField(
+        _("slug"),
+        max_length=250,
+        unique=True,
+        help_text="для URL, например: loft-na-pokrovke",
+        slugify=venue_slugify,
+        always_update=False,
+    )
     
     description = models.TextField(_("описание"), blank=True)
     short_description = models.CharField(_("короткое описание"), max_length=300, blank=True)
@@ -56,8 +64,8 @@ class Venue(models.Model):
     )
     
     area_sq_m = models.PositiveIntegerField(
-        _("площадь, м²"), 
-        null=True, 
+        _("площадь, м²"),
+        null=True,
         blank=True
     )
     
@@ -145,13 +153,11 @@ class Venue(models.Model):
         return f"{self.name} ({self.city})"
 
     def get_absolute_url(self):
-        # пример — если используешь slug
         from django.urls import reverse
         return reverse('venues:detail', kwargs={'slug': self.slug})
 
     @property
     def main_photo(self):
-        # если добавишь модель VenueImage
         photo = self.images.order_by('order', '-created_at').first()
         return photo.image.url if photo else None
 

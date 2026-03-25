@@ -9,7 +9,7 @@ from .models import Booking
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
-    raw_id_fields = ['event_title']
+    raw_id_fields = ['event']
     
     list_display = [
         'short_id',
@@ -121,7 +121,6 @@ class BookingAdmin(admin.ModelAdmin):
             return '—'
         return f'{obj.total_price:,.0f} ₽'
     
-    # Оптимизация запросов (очень важно для производительности)
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related(

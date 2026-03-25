@@ -92,6 +92,20 @@ class Event(models.Model):
             models.Index(fields=['renter']),
         ]
 
+    venues = models.ManyToManyField(
+    'venues.Venue',
+    through='bookings.Booking',
+    through_fields=('event', 'venue'),
+    related_name='events',
+    )
+
+    specialists = models.ManyToManyField(
+    'users.Specialist',
+    through='hires.Hire',
+    through_fields=('event', 'specialist'),
+    related_name='events',
+    )
+
     def __str__(self):
         return f"{self.title} — {self.date.strftime('%d.%m.%Y')}"
 
@@ -108,10 +122,13 @@ class Event(models.Model):
 
     @property
     def duration(self):
-        """Примерная продолжительность в часах"""
         if self.start_time and self.end_time:
-            start = timezone.datetime.combine(self.date, self.start_time)
-            end = timezone.datetime.combine(self.date, self.end_time)
+            start = timezone.make_aware(
+                timezone.datetime.combine(self.date, self.start_time)
+            )
+            end = timezone.make_aware(
+                timezone.datetime.combine(self.date, self.end_time)
+            )
             delta = end - start
             return round(delta.total_seconds() / 3600, 1)
         return None

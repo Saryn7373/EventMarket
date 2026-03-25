@@ -39,3 +39,4 @@ media/             # user uploaded media (can be ignored if uploaded to a cloud 
 .DS_Store          # macOS
 .Thumbs.db         # Windows
 
+*.dump
