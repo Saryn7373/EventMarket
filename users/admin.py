@@ -144,6 +144,10 @@ class OwnerAdmin(admin.ModelAdmin):
     @admin.display(description='Дата регистрации', ordering='user__date_joined')
     def user_date_joined(self, obj):
         return obj.user.date_joined if obj.user else '—'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related('renter', 'owner', 'specialist')
 
 
 @admin.register(Specialist)
