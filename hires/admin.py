@@ -38,14 +38,14 @@ class HireAdmin(admin.ModelAdmin):
     
     date_hierarchy = 'start_datetime'
     
-    readonly_fields = ['created_at', 'updated_at', 'duration_hours']
+    readonly_fields = ['created_at', 'updated_at', 'duration_display']
     
     fieldsets = (
         (None, {
             'fields': ('event', 'specialist')
         }),
         ('Период работы', {
-            'fields': ('start_datetime', 'end_datetime', 'duration_hours')
+            'fields': ('start_datetime', 'end_datetime', 'duration_display')
         }),
         ('Стоимость и статус', {
             'fields': ('total_price', 'status')

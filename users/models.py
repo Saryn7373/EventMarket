@@ -32,8 +32,8 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(_("email адрес"), unique=True, db_index=True)
-    first_name = models.CharField(_(""), max_length=20)
-    last_name = models.CharField(_(""), max_length=20)
+    first_name = models.CharField(_("имя"), max_length=20)
+    last_name = models.CharField(_("фамилия"), max_length=20)
     is_active = models.BooleanField(_("активен"), default=True)
     is_staff = models.BooleanField(_("доступ в админку"), default=False)
     date_joined = models.DateTimeField(_("дата регистрации"), auto_now_add=True)
