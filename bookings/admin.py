@@ -121,6 +121,14 @@ class BookingAdmin(admin.ModelAdmin):
             return '—'
         return f'{obj.total_price:,.0f} ₽'
     
+    @admin.action(description="Отменить выбранные бронирования")
+    def cancel_bookings(self, request, queryset):
+        updated = queryset.filter(
+            status__in=['pending', 'confirmed']
+        ).update(status='cancelled')
+        
+        self.message_user(request, f"Отменено бронирований: {updated}")
+    
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related(

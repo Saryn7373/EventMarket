@@ -145,6 +145,20 @@ class PaymentAdmin(admin.ModelAdmin):
         
         return response
     
+    @admin.action(description="Удалить просроченные pending-платежи")
+    def delete_expired_pending(self, request, queryset):
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        cutoff = timezone.now() - timedelta(days=7)
+        
+        deleted_count, _ = queryset.filter(
+            status='pending',
+            created_at__lt=cutoff
+        ).delete()
+        
+        self.message_user(request, f"Удалено платежей: {deleted_count}")
+    
     # Оптимизация запросов
     def get_queryset(self, request):
         qs = super().get_queryset(request)

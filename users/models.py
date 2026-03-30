@@ -125,7 +125,8 @@ class Specialist(models.Model):
     specialty = models.CharField(_("специализация"), max_length=150, blank=True)
     license_number = models.CharField(_("номер лицензии"), max_length=50, blank=True)
     city = models.CharField(_("город работы"), max_length=100, blank=True)
-    rating = models.DecimalField(_("рейтинг"), max_digits=3, decimal_places=2, default=0.00)    
+    rating = models.DecimalField(_("рейтинг"), max_digits=3, decimal_places=2, default=0.00)
+    portfolio_url = models.URLField(_("ссылка на портфолио"), blank=True)   
 
     class Meta:
         verbose_name = _("специалист")

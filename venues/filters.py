@@ -12,7 +12,10 @@ class VenueFilter(django_filters.FilterSet):
     price_hour_max  = django_filters.NumberFilter(field_name='price_per_hour', lookup_expr='lte')
     price_day_min   = django_filters.NumberFilter(field_name='price_per_day',  lookup_expr='gte')
     price_day_max   = django_filters.NumberFilter(field_name='price_per_day',  lookup_expr='lte')
-
+    description = django_filters.CharFilter(
+        field_name='description',
+        lookup_expr='contains'
+    )
     class Meta:
         model  = Venue
         fields = [

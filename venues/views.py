@@ -74,12 +74,28 @@ class VenueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
-        serializer = VenueWriteSerializer(
-            instance, data=request.data, partial=partial, context={'request': request}
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=partial
         )
         serializer.is_valid(raise_exception=True)
         venue = serializer.save()
         return Response(VenueDetailSerializer(venue).data)
+    
+    def destroy(self, request, *args, **kwargs):
+        venue = self.get_object()
+        
+        has_active = venue.bookings.filter(
+            status__in=['pending', 'confirmed']
+        ).exists()
+        
+        if has_active:
+            total = venue.bookings.count()
+            return Response(
+                {"detail": f"Нельзя удалить: {total} бронирований."},
+                status=400
+            )
+        
+        return super().destroy(request, *args, **kwargs)
 
 
 # ────────────────────────────────────────────────
