@@ -101,8 +101,10 @@ class Command(BaseCommand):
             specialists.append(Specialist.objects.create(
                 user=user,
                 specialty=random.choice(specialties),
+                license_number=fake.numerify('LIC-#####'),
                 city=fake.city(),
                 rating=Decimal(str(round(random.uniform(3.0, 5.0), 2))),
+                portfolio_url=fake.url(),
             ))
         self.stdout.write(f'  👤 Specialists: {n}')
         return specialists
