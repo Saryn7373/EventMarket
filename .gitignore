@@ -26,10 +26,12 @@ htmlcov/
 # Django specific
 *.log
 *.pot
-settings.py
-.env
 db.sqlite3         # if using SQLite for local development only
-media/             # user uploaded media (can be ignored if uploaded to a cloud storage)
+backend/media/     # user uploaded media (can be ignored if uploaded to a cloud storage)
+
+# Backend settings
+backend/.env
+*.dump
 
 # IDE-specific files (optional)
 .idea/             # PyCharm
@@ -37,6 +39,12 @@ media/             # user uploaded media (can be ignored if uploaded to a cloud 
 
 # OS generated files
 .DS_Store          # macOS
-.Thumbs.db         # Windows
+Thumbs.db          # Windows
 
-*.dump
+# Frontend (if using Node.js)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
