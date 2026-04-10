@@ -4,18 +4,16 @@ import type { User } from '~/utils/types'
 export default defineNuxtRouteMiddleware(async (to) => {
   const $api = useNuxtApp().$api
 
-  // Нет токенов — редирект на логин
+  // Работаем только на клиенте (SSR не может читать cookies запроса)
+  if (import.meta.server) return
+
   if (!$api.getAccessToken() && !$api.getRefreshToken()) {
     return navigateTo('/auth/login')
   }
 
-  // Если пользователь уже загружен — пропускаем
   const userStore = useUserStore()
-  if (userStore.isAuthenticated) {
-    return
-  }
+  if (userStore.isAuthenticated) return
 
-  // Пробуем загрузить пользователя
   try {
     const user = await $api.get<User>('/auth/me/')
     userStore.setUser(user)
@@ -24,9 +22,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const is401 = err.statusCode === 401 || err.response?.status === 401
 
     if (is401 && $api.getRefreshToken()) {
-      // Пробуем refresh
       try {
-        const tokens = await $api.refreshTokens()
+        await $api.refreshTokens()
         const user = await $api.get<User>('/auth/me/')
         userStore.setUser(user)
         return
@@ -36,8 +33,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
       }
     }
 
-    // Refresh не удался или нет refresh-токена
-    $api.clearTokens()
-    return navigateTo('/auth/login')
+    // ← НЕ чистим токены если это не 401
+    // (например, сеть недоступна — не надо разлогинивать)
+    if (is401) {
+      $api.clearTokens()
+      return navigateTo('/auth/login')
+    }
   }
 })

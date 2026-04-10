@@ -9,6 +9,7 @@ import UiAlert from '~/components/ui/Alert'
 
 definePageMeta({
   middleware: 'auth',
+  ssr: false,
 })
 
 export default defineComponent({

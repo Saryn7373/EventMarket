@@ -22,21 +22,15 @@ export default defineComponent({
 
       try {
         const api = useApi()
-        const payload: LoginPayload = {
-          email: email.value,
-          password: password.value,
-        }
-
         const data = await api.post<{ access: string; refresh: string }>(
           '/auth/login/',
-          payload
+          { email: email.value, password: password.value } as LoginPayload
         )
 
-        // Сохраняем токены через единый API
+        // ✅ Оба токена через единый API — один и тот же ref внутри плагина
         api.setAccessToken(data.access)
-        useCookie<string | null>('refresh_token', { maxAge: 60 * 60 * 24 * 7, path: '/' }).value = data.refresh
+        api.setRefreshToken(data.refresh)  // ← вместо raw useCookie
 
-        // Редирект в дашборд
         await navigateTo('/dashboard')
       } catch (err: any) {
         error.value = err.data?.detail || err.message || 'Неверный email или пароль'

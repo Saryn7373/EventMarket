@@ -3,12 +3,18 @@ import { useUserStore } from '~/stores/user'
 import { useApi } from '~/composables/useApi'
 import { API_ENDPOINTS } from '~/utils/constants'
 import type { User } from '~/utils/types'
+import { useRouter } from 'vue-router'
 
 export default defineComponent({
   name: 'DefaultLayout',
   setup(_, { slots }) {
     const userStore = useUserStore()
     const $api = useApi()
+    const router = useRouter()
+
+    const navigate = (path: string) => {
+      router.push(path)
+    }
 
     onMounted(async () => {
       // Если пользователь ещё не загружен, пробуем получить данные
@@ -28,29 +34,29 @@ export default defineComponent({
         <header class="app-header">
           <div class="container">
             <nav class="header-nav">
-              <a href="/" class="logo">
+              <div class="logo" onClick={() => navigate('/')}>
                 EventMarket
-              </a>
+              </div>
               <div class="header-links">
-                <a href="/venues" class="nav-link">
+                <div class="nav-link" onClick={() => navigate('/venues')}>
                   Площадки
-                </a>
+                </div>
                 {userStore.isAuthenticated ? (
                   <>
-                    <a href="/dashboard" class="nav-link">
+                    <div class="nav-link" onClick={() => navigate('/dashboard')}>
                       Дашборд
-                    </a>
-                    <a href="/profile" class="nav-link">
+                    </div>
+                    <div class="nav-link" onClick={() => navigate('/profile')}>
                       Профиль
-                    </a>
+                    </div>
                     <span class="user-greeting">
                       {userStore.user?.first_name || userStore.user?.email}
                     </span>
                   </>
                 ) : (
-                  <a href="/auth/login" class="btn btn--primary btn--sm">
+                  <button class="btn btn--primary btn--sm" onClick={() => navigate('/auth/login')}>
                     Войти
-                  </a>
+                  </button>
                 )}
               </div>
             </nav>
