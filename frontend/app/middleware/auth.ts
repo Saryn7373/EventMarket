@@ -4,12 +4,17 @@ import type { User } from '~/utils/types'
 export default defineNuxtRouteMiddleware(async (to) => {
   const $api = useNuxtApp().$api
 
-  // Работаем только на клиенте (SSR не может читать cookies запроса)
-  if (import.meta.server) return
-
+  // Синхронная проверка токенов работает и на сервере (useCookie читает
+  // куки запроса), и на клиенте. Делаем редирект до того, как защищённая
+  // страница успеет отрендериться — иначе на /dashboard виден мгновенный
+  // «флэш» содержимого, а затем layout переключается на /auth/login
+  // прямо поверх старой разметки.
   if (!$api.getAccessToken() && !$api.getRefreshToken()) {
     return navigateTo('/auth/login')
   }
+
+  // Запрос /auth/me и логику refresh выполняем только на клиенте.
+  if (import.meta.server) return
 
   const userStore = useUserStore()
   if (userStore.isAuthenticated) return

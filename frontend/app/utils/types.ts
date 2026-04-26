@@ -18,6 +18,7 @@ export interface User {
   first_name: string
   last_name: string
   role: UserRole
+  role_display: string
   date_joined: string
 }
 
@@ -186,8 +187,10 @@ export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
 
 export interface BookingListInfo {
   id: string
+  venue_id: string
   venue_name: string
   venue_city: string
+  event_id: string
   event_title: string
   event_date: string
   start_datetime: string
@@ -246,6 +249,7 @@ export interface SpecialistDetailInfo {
 
 export interface HireListInfo {
   id: string
+  event_id: string
   event_title: string
   event_date: string
   specialist_name: string

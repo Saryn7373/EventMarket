@@ -1,42 +1,27 @@
 import { defineComponent, onMounted, computed, ref } from 'vue'
 import { useUserStore } from '~/stores/user'
 import { useApi } from '~/composables/useApi'
-import { API_ENDPOINTS, USER_ROLES, BOOKING_STATUS, HIRE_STATUS, PAYMENT_STATUS, EVENT_STATUS } from '~/utils/constants'
-import type { BookingListInfo, HireListInfo, PaymentListInfo, Event } from '~/utils/types'
+import {
+  API_ENDPOINTS,
+  USER_ROLES,
+  BOOKING_STATUS_COLORS,
+  HIRE_STATUS_COLORS,
+  EVENT_STATUS_COLORS,
+  VENUE_STATUS,
+  VENUE_STATUS_COLORS,
+  EVENT_THEME_ICONS,
+} from '~/utils/constants'
+import type {
+  BookingListInfo,
+  HireListInfo,
+  Event,
+  Venue,
+} from '~/utils/types'
 import { useRouter } from 'vue-router'
 
 definePageMeta({
   middleware: 'auth',
 })
-
-interface DashboardStats {
-  bookings: {
-    total: number
-    pending: number
-    confirmed: number
-    completed: number
-  }
-  events: {
-    total: number
-    upcoming: number
-    active: number
-  }
-  hires: {
-    total: number
-    pending: number
-    confirmed: number
-  }
-  payments: {
-    total: number
-    pending: number
-    succeeded: number
-    totalAmount: number
-  }
-  venues: {
-    total: number
-    published: number
-  }
-}
 
 export default defineComponent({
   name: 'DashboardPage',
@@ -46,401 +31,493 @@ export default defineComponent({
     const router = useRouter()
 
     const loading = ref(true)
-    const stats = ref<DashboardStats>({
-      bookings: { total: 0, pending: 0, confirmed: 0, completed: 0 },
-      events: { total: 0, upcoming: 0, active: 0 },
-      hires: { total: 0, pending: 0, confirmed: 0 },
-      payments: { total: 0, pending: 0, succeeded: 0, totalAmount: 0 },
-      venues: { total: 0, published: 0 },
-    })
+    const errorMessage = ref<string | null>(null)
 
-    const recentBookings = ref<BookingListInfo[]>([])
-    const recentEvents = ref<Event[]>([])
-    const recentHires = ref<HireListInfo[]>([])
-    const recentPayments = ref<PaymentListInfo[]>([])
+    // Данные арендатора
+    const myEvents = ref<Event[]>([])
+    const myBookings = ref<BookingListInfo[]>([])
+    const myHires = ref<HireListInfo[]>([])
+
+    // Данные владельца
+    const myVenues = ref<Venue[]>([])
+    const venueBookings = ref<BookingListInfo[]>([])
+
+    // Данные специалиста
+    const specialistHires = ref<HireListInfo[]>([])
 
     const userRole = computed(() => userStore.user?.role ?? 'unknown')
     const userRoleDisplay = computed(() => USER_ROLES[userRole.value])
 
-    const formatCurrency = (amount: number): string => {
-      return new Intl.NumberFormat('ru-RU', {
+    const formatCurrency = (amount: number): string =>
+      new Intl.NumberFormat('ru-RU', {
         style: 'currency',
         currency: 'RUB',
         minimumFractionDigits: 0,
       }).format(amount)
-    }
 
-    const formatDate = (dateStr: string): string => {
-      return new Date(dateStr).toLocaleDateString('ru-RU', {
+    const formatDate = (dateStr: string): string =>
+      new Date(dateStr).toLocaleDateString('ru-RU', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
       })
+
+    const formatDateTime = (dateStr: string): string =>
+      new Date(dateStr).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+
+    const fetchAll = async <T,>(endpoint: string): Promise<T[]> => {
+      const res = await $api.get<{ results: T[]; count: number }>(endpoint, {
+        params: { page_size: 100 },
+      })
+      return res.results || []
     }
 
     const loadDashboardData = async () => {
       loading.value = true
+      errorMessage.value = null
+
       try {
-        // Загружаем данные параллельно
-        const [bookingsRes, eventsRes, hiresRes, paymentsRes] = await Promise.all([
-          $api.get<{ results: BookingListInfo[]; count: number }>(API_ENDPOINTS.bookings.my, {
-            params: { page_size: 5 },
-          }),
-          $api.get<{ results: Event[]; count: number }>(API_ENDPOINTS.events.my, {
-            params: { page_size: 5 },
-          }),
-          $api.get<{ results: HireListInfo[]; count: number }>(API_ENDPOINTS.hires.my, {
-            params: { page_size: 5 },
-          }),
-          $api.get<{ results: PaymentListInfo[]; count: number }>(API_ENDPOINTS.payments.my, {
-            params: { page_size: 5 },
-          }),
-        ])
-
-        recentBookings.value = bookingsRes.results || []
-        recentEvents.value = eventsRes.results || []
-        recentHires.value = hiresRes.results || []
-        recentPayments.value = paymentsRes.results || []
-
-        // Считаем статистику
-        stats.value.bookings.total = bookingsRes.count || 0
-        stats.value.bookings.pending = bookingsRes.results?.filter((b) => b.status === 'pending').length || 0
-        stats.value.bookings.confirmed = bookingsRes.results?.filter((b) => b.status === 'confirmed').length || 0
-        stats.value.bookings.completed = bookingsRes.results?.filter((b) => b.status === 'completed').length || 0
-
-        stats.value.events.total = eventsRes.count || 0
-        stats.value.events.upcoming = eventsRes.results?.filter((e) => e.is_upcoming).length || 0
-        stats.value.events.active = eventsRes.results?.filter((e) => e.status === 'active' || e.status === 'ongoing').length || 0
-
-        stats.value.hires.total = hiresRes.count || 0
-        stats.value.hires.pending = hiresRes.results?.filter((h) => h.status === 'pending').length || 0
-        stats.value.hires.confirmed = hiresRes.results?.filter((h) => h.status === 'confirmed').length || 0
-
-        stats.value.payments.total = paymentsRes.count || 0
-        stats.value.payments.pending = paymentsRes.results?.filter((p) => p.status === 'pending').length || 0
-        stats.value.payments.succeeded = paymentsRes.results?.filter((p) => p.status === 'succeeded').length || 0
-        stats.value.payments.totalAmount =
-          paymentsRes.results?.reduce((sum, p) => sum + p.amount, 0) || 0
-
-        // Площадки загружаем отдельно если пользователь owner
-        if (userRole.value === 'owner') {
-          try {
-            const venuesRes = await $api.get<{ results: any[]; count: number }>(API_ENDPOINTS.venues.my, {
-              params: { page_size: 1 },
-            })
-            stats.value.venues.total = venuesRes.count || 0
-          } catch {
-            // Игнорируем ошибки
+        switch (userRole.value) {
+          case 'renter': {
+            const [events, bookings, hires] = await Promise.all([
+              fetchAll<Event>(API_ENDPOINTS.events.my),
+              fetchAll<BookingListInfo>(API_ENDPOINTS.bookings.my),
+              fetchAll<HireListInfo>(API_ENDPOINTS.hires.my),
+            ])
+            myEvents.value = events
+            myBookings.value = bookings
+            myHires.value = hires
+            break
           }
+          case 'owner': {
+            const [venues, bookings] = await Promise.all([
+              fetchAll<Venue>(API_ENDPOINTS.venues.my),
+              fetchAll<BookingListInfo>(API_ENDPOINTS.bookings.my),
+            ])
+            myVenues.value = venues
+            venueBookings.value = bookings
+            break
+          }
+          case 'specialist': {
+            specialistHires.value = await fetchAll<HireListInfo>(
+              API_ENDPOINTS.hires.specialist,
+            )
+            break
+          }
+          default:
+            break
         }
-      } catch (error) {
-        console.error('Error loading dashboard:', error)
+      } catch (err: any) {
+        errorMessage.value = err.message || 'Не удалось загрузить данные'
+        console.error('Dashboard load error:', err)
       } finally {
         loading.value = false
       }
     }
 
-    onMounted(() => {
-      loadDashboardData()
+    onMounted(loadDashboardData)
+
+    // ─── Группировка для арендатора ─────────────────────────
+    const bookingsByEvent = computed(() => {
+      const map = new Map<string, BookingListInfo[]>()
+      for (const b of myBookings.value) {
+        const list = map.get(b.event_id) ?? []
+        list.push(b)
+        map.set(b.event_id, list)
+      }
+      return map
     })
 
-    const getStatusColor = (status: string): string => {
-      const colors: Record<string, string> = {
-        pending: '#f59e0b',
-        confirmed: '#3b82f6',
-        completed: '#10b981',
-        cancelled: '#ef4444',
-        succeeded: '#10b981',
-        failed: '#ef4444',
-        active: '#06b6d4',
-        ongoing: '#22c55e',
-        planned: '#6366f1',
+    const hiresByEvent = computed(() => {
+      const map = new Map<string, HireListInfo[]>()
+      for (const h of myHires.value) {
+        const list = map.get(h.event_id) ?? []
+        list.push(h)
+        map.set(h.event_id, list)
       }
-      return colors[status] || '#6b7280'
-    }
+      return map
+    })
 
-    const getStatusLabel = (status: string, type: 'booking' | 'event' | 'hire' | 'payment'): string => {
-      const maps = {
-        booking: BOOKING_STATUS as Record<string, string>,
-        event: EVENT_STATUS as Record<string, string>,
-        hire: HIRE_STATUS as Record<string, string>,
-        payment: PAYMENT_STATUS as Record<string, string>,
-      }
-      return maps[type][status] || status
-    }
+    // ─── Хелперы рендера ────────────────────────────────────
+    const renderStatusBadge = (label: string, color: string) => (
+      <span class={`badge badge--${color}`}>{label}</span>
+    )
 
-    return () => (
-      <div class="dashboard-page">
-        <div class="container">
-          <div class="dashboard-header">
-            <div>
-              <h1 class="dashboard-title">Дашборд</h1>
-              <p class="dashboard-subtitle">
-                Обзор вашей активности на платформе
-              </p>
-            </div>
-            <div class="dashboard-role-badge">
-              {userRoleDisplay.value}
-            </div>
-          </div>
-
-          {loading.value ? (
-            <div class="loading-state">
-              <div class="spinner"></div>
-              <p>Загрузка данных...</p>
-            </div>
-          ) : (
-            <>
-              {/* Статистика */}
-              <div class="stats-grid">
-                <div class="stat-card" onClick={() => router.push('/dashboard/bookings')}>
-                  <div class="stat-icon">📅</div>
-                  <div class="stat-info">
-                    <div class="stat-value">{stats.value.bookings.total}</div>
-                    <div class="stat-label">Бронирования</div>
-                  </div>
-                </div>
-
-                <div class="stat-card" onClick={() => router.push('/dashboard/events')}>
-                  <div class="stat-icon">🎉</div>
-                  <div class="stat-info">
-                    <div class="stat-value">{stats.value.events.total}</div>
-                    <div class="stat-label">Мероприятия</div>
-                  </div>
-                </div>
-
-                <div class="stat-card" onClick={() => router.push('/dashboard/hires')}>
-                  <div class="stat-icon">👥</div>
-                  <div class="stat-info">
-                    <div class="stat-value">{stats.value.hires.total}</div>
-                    <div class="stat-label">Наймы</div>
-                  </div>
-                </div>
-
-                <div class="stat-card" onClick={() => router.push('/dashboard/payments')}>
-                  <div class="stat-icon">💳</div>
-                  <div class="stat-info">
-                    <div class="stat-value">{formatCurrency(stats.value.payments.totalAmount)}</div>
-                    <div class="stat-label">Оплачено</div>
-                  </div>
-                </div>
-
-                {userRole.value === 'owner' && (
-                  <div class="stat-card" onClick={() => router.push('/dashboard/venues')}>
-                    <div class="stat-icon">🏛️</div>
-                    <div class="stat-info">
-                      <div class="stat-value">{stats.value.venues.total}</div>
-                      <div class="stat-label">Площадки</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Последние бронирования */}
-              {recentBookings.value.length > 0 && (
-                <div class="section">
-                  <div class="section-header">
-                    <h2 class="section-title">Последние бронирования</h2>
-                    <a href="/dashboard/bookings" class="section-link">
-                      Все бронирования →
-                    </a>
-                  </div>
-                  <div class="table-container">
-                    <table class="data-table">
-                      <thead>
-                        <tr>
-                          <th>Площадка</th>
-                          <th>Мероприятие</th>
-                          <th>Дата</th>
-                          <th>Сумма</th>
-                          <th>Статус</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentBookings.value.map((booking) => (
-                          <tr>
-                            <td>
-                              <div class="cell-main">{booking.venue_name}</div>
-                              <div class="cell-sub">{booking.venue_city}</div>
-                            </td>
-                            <td>{booking.event_title}</td>
-                            <td>{formatDate(booking.start_datetime)}</td>
-                            <td class="cell-price">{formatCurrency(booking.total_price)}</td>
-                            <td>
-                              <span
-                                class="status-badge"
-                                style={{ backgroundColor: getStatusColor(booking.status) }}
-                              >
-                                {getStatusLabel(booking.status, 'booking')}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Последние мероприятия */}
-              {recentEvents.value.length > 0 && (
-                <div class="section">
-                  <div class="section-header">
-                    <h2 class="section-title">Последние мероприятия</h2>
-                    <a href="/dashboard/events" class="section-link">
-                      Все мероприятия →
-                    </a>
-                  </div>
-                  <div class="table-container">
-                    <table class="data-table">
-                      <thead>
-                        <tr>
-                          <th>Название</th>
-                          <th>Дата</th>
-                          <th>Тематика</th>
-                          <th>Гостей</th>
-                          <th>Статус</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentEvents.value.map((event) => (
-                          <tr>
-                            <td class="cell-main">{event.title}</td>
-                            <td>{formatDate(event.date)}</td>
-                            <td>{event.theme_display}</td>
-                            <td>{event.expected_guests}</td>
-                            <td>
-                              <span
-                                class="status-badge"
-                                style={{ backgroundColor: getStatusColor(event.status) }}
-                              >
-                                {getStatusLabel(event.status, 'event')}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Последние наймы */}
-              {recentHires.value.length > 0 && (
-                <div class="section">
-                  <div class="section-header">
-                    <h2 class="section-title">Последние наймы</h2>
-                    <a href="/dashboard/hires" class="section-link">
-                      Все наймы →
-                    </a>
-                  </div>
-                  <div class="table-container">
-                    <table class="data-table">
-                      <thead>
-                        <tr>
-                          <th>Специалист</th>
-                          <th>Мероприятие</th>
-                          <th>Дата</th>
-                          <th>Сумма</th>
-                          <th>Статус</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentHires.value.map((hire) => (
-                          <tr>
-                            <td>
-                              <div class="cell-main">{hire.specialist_name}</div>
-                              <div class="cell-sub">{hire.specialist_specialty}</div>
-                            </td>
-                            <td>{hire.event_title}</td>
-                            <td>{formatDate(hire.start_datetime)}</td>
-                            <td class="cell-price">{formatCurrency(hire.total_price)}</td>
-                            <td>
-                              <span
-                                class="status-badge"
-                                style={{ backgroundColor: getStatusColor(hire.status) }}
-                              >
-                                {getStatusLabel(hire.status, 'hire')}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Последние платежи */}
-              {recentPayments.value.length > 0 && (
-                <div class="section">
-                  <div class="section-header">
-                    <h2 class="section-title">Последние платежи</h2>
-                    <a href="/dashboard/payments" class="section-link">
-                      Все платежи →
-                    </a>
-                  </div>
-                  <div class="table-container">
-                    <table class="data-table">
-                      <thead>
-                        <tr>
-                          <th>Тип</th>
-                          <th>Описание</th>
-                          <th>Сумма</th>
-                          <th>Дата</th>
-                          <th>Статус</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentPayments.value.map((payment) => (
-                          <tr>
-                            <td>
-                              <span class="type-badge">
-                                {payment.target_type === 'booking' ? '📅 Бронь' : '👥 Найм'}
-                              </span>
-                            </td>
-                            <td class="cell-main">
-                              {payment.target_type === 'booking' ? 'Бронирование' : 'Найм специалиста'}
-                            </td>
-                            <td class="cell-price">{formatCurrency(payment.amount)}</td>
-                            <td>{formatDate(payment.created_at)}</td>
-                            <td>
-                              <span
-                                class="status-badge"
-                                style={{ backgroundColor: getStatusColor(payment.status) }}
-                              >
-                                {getStatusLabel(payment.status, 'payment')}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Пустое состояние */}
-              {!loading.value &&
-                recentBookings.value.length === 0 &&
-                recentEvents.value.length === 0 &&
-                recentHires.value.length === 0 &&
-                recentPayments.value.length === 0 && (
-                  <div class="empty-state">
-                    <div class="empty-icon">📊</div>
-                    <h3>Пока нет данных</h3>
-                    <p>Начните с бронирования площадки или создания мероприятия</p>
-                    <div class="empty-actions">
-                      <a href="/venues" class="btn btn--primary">
-                        Найти площадку
-                      </a>
-                    </div>
-                  </div>
-                )}
-            </>
-          )}
-        </div>
+    const renderEmpty = (icon: string, title: string, hint: string, action?: { label: string; onClick: () => void }) => (
+      <div class="empty-state">
+        <div class="empty-state-icon">{icon}</div>
+        <h3 class="empty-state-title">{title}</h3>
+        <p>{hint}</p>
+        {action && (
+          <button class="btn btn--primary" onClick={action.onClick}>
+            {action.label}
+          </button>
+        )}
       </div>
     )
+
+    // ─── Renter view ────────────────────────────────────────
+    const renderRenter = () => (
+      <>
+        <div class="dashboard-toolbar">
+          <button
+            class="btn btn--primary"
+            onClick={() => router.push('/dashboard/events/new')}
+          >
+            + Создать мероприятие
+          </button>
+        </div>
+
+        {myEvents.value.length === 0 ? (
+          renderEmpty(
+            '🎉',
+            'У вас пока нет мероприятий',
+            'Создайте первое мероприятие, чтобы бронировать площадки и нанимать специалистов',
+            {
+              label: '+ Создать мероприятие',
+              onClick: () => router.push('/dashboard/events/new'),
+            },
+          )
+        ) : (
+          <div class="event-list">
+            {myEvents.value.map((event) => {
+              const bookings = bookingsByEvent.value.get(event.id) ?? []
+              const hires = hiresByEvent.value.get(event.id) ?? []
+              const themeIcon = EVENT_THEME_ICONS[event.theme] ?? '📌'
+
+              return (
+                <article
+                  class="event-card"
+                  onClick={() => router.push(`/events/${event.id}`)}
+                >
+                  <header class="event-card-header">
+                    <div class="event-card-title-block">
+                      <h3 class="event-card-title">
+                        <span class="event-card-icon">{themeIcon}</span>
+                        {event.title}
+                      </h3>
+                      <div class="event-card-meta">
+                        <span>{formatDate(event.date)}</span>
+                        <span>·</span>
+                        <span>{event.theme_display}</span>
+                        <span>·</span>
+                        <span>{event.expected_guests} гостей</span>
+                      </div>
+                    </div>
+                    {renderStatusBadge(
+                      event.status_display,
+                      EVENT_STATUS_COLORS[event.status] ?? 'gray',
+                    )}
+                  </header>
+
+                  <div class="event-card-body">
+                    <section class="event-subsection">
+                      <h4 class="event-subsection-title">
+                        Бронирования <span class="muted">· {bookings.length}</span>
+                      </h4>
+                      {bookings.length === 0 ? (
+                        <p class="event-subsection-empty">Площадки ещё не забронированы</p>
+                      ) : (
+                        <ul class="event-subsection-list">
+                          {bookings.map((b) => (
+                            <li class="event-subsection-item">
+                              <div class="event-subsection-item-main">
+                                <strong>{b.venue_name}</strong>
+                                <span class="muted"> · {b.venue_city}</span>
+                              </div>
+                              <div class="event-subsection-item-meta">
+                                <span>{formatDateTime(b.start_datetime)}</span>
+                                <span>·</span>
+                                <span>{formatCurrency(b.total_price)}</span>
+                              </div>
+                              {renderStatusBadge(
+                                b.status_display,
+                                BOOKING_STATUS_COLORS[b.status] ?? 'gray',
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+
+                    <section class="event-subsection">
+                      <h4 class="event-subsection-title">
+                        Наймы специалистов <span class="muted">· {hires.length}</span>
+                      </h4>
+                      {hires.length === 0 ? (
+                        <p class="event-subsection-empty">Специалисты ещё не наняты</p>
+                      ) : (
+                        <ul class="event-subsection-list">
+                          {hires.map((h) => (
+                            <li class="event-subsection-item">
+                              <div class="event-subsection-item-main">
+                                <strong>{h.specialist_name}</strong>
+                                <span class="muted"> · {h.specialist_specialty || '—'}</span>
+                              </div>
+                              <div class="event-subsection-item-meta">
+                                <span>{formatDateTime(h.start_datetime)}</span>
+                                <span>·</span>
+                                <span>{formatCurrency(h.total_price)}</span>
+                              </div>
+                              {renderStatusBadge(
+                                h.status_display,
+                                HIRE_STATUS_COLORS[h.status] ?? 'gray',
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+      </>
+    )
+
+    // ─── Owner view ─────────────────────────────────────────
+    const renderOwner = () => (
+      <>
+        <div class="dashboard-toolbar">
+          <button
+            class="btn btn--primary"
+            onClick={() => router.push('/dashboard/venues/new')}
+          >
+            + Зарегистрировать площадку
+          </button>
+        </div>
+
+        <section class="dashboard-section">
+          <div class="section-header">
+            <h2 class="section-title">Мои площадки</h2>
+          </div>
+
+          {myVenues.value.length === 0 ? (
+            renderEmpty(
+              '🏛️',
+              'У вас пока нет площадок',
+              'Зарегистрируйте свою первую площадку, чтобы принимать бронирования',
+              {
+                label: '+ Зарегистрировать площадку',
+                onClick: () => router.push('/dashboard/venues/new'),
+              },
+            )
+          ) : (
+            <div class="venue-grid">
+              {myVenues.value.map((venue) => (
+                <article
+                  class="venue-card"
+                  onClick={() => router.push(`/venues/${venue.id}`)}
+                >
+                  <header class="venue-card-header">
+                    <h3 class="venue-card-title">{venue.name}</h3>
+                    {renderStatusBadge(
+                      VENUE_STATUS[venue.status] ?? venue.status,
+                      VENUE_STATUS_COLORS[venue.status] ?? 'gray',
+                    )}
+                  </header>
+                  <div class="venue-card-meta">
+                    <div>{venue.city}, {venue.address}</div>
+                    <div>
+                      Вместимость: {venue.capacity_min}–{venue.capacity_max} чел.
+                    </div>
+                  </div>
+                  <div class="venue-card-prices">
+                    {venue.price_per_hour && (
+                      <span>{formatCurrency(Number(venue.price_per_hour))} / час</span>
+                    )}
+                    {venue.price_per_day && (
+                      <span>{formatCurrency(Number(venue.price_per_day))} / сутки</span>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section class="dashboard-section">
+          <div class="section-header">
+            <h2 class="section-title">Аренды моих площадок</h2>
+          </div>
+
+          {venueBookings.value.length === 0 ? (
+            <div class="empty-state">
+              <p>Пока никто не бронировал ваши площадки</p>
+            </div>
+          ) : (
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Площадка</th>
+                    <th>Мероприятие</th>
+                    <th>Период</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {venueBookings.value.map((b) => (
+                    <tr>
+                      <td>
+                        <strong>{b.venue_name}</strong>
+                        <div class="muted text-sm">{b.venue_city}</div>
+                      </td>
+                      <td>{b.event_title}</td>
+                      <td>
+                        <div>{formatDateTime(b.start_datetime)}</div>
+                        <div class="muted text-sm">
+                          до {formatDateTime(b.end_datetime)}
+                        </div>
+                      </td>
+                      <td class="text-semibold">{formatCurrency(b.total_price)}</td>
+                      <td>
+                        {renderStatusBadge(
+                          b.status_display,
+                          BOOKING_STATUS_COLORS[b.status] ?? 'gray',
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </>
+    )
+
+    // ─── Specialist view ────────────────────────────────────
+    const renderSpecialist = () => (
+      <section class="dashboard-section">
+        <div class="section-header">
+          <h2 class="section-title">Мероприятия, на которые меня наняли</h2>
+        </div>
+
+        {specialistHires.value.length === 0 ? (
+          renderEmpty(
+            '🤝',
+            'Вас пока никто не нанял',
+            'Когда арендаторы пригласят вас на мероприятие, они появятся здесь',
+          )
+        ) : (
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Мероприятие</th>
+                  <th>Дата</th>
+                  <th>Период работы</th>
+                  <th>Часов</th>
+                  <th>Гонорар</th>
+                  <th>Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+                {specialistHires.value.map((h) => (
+                  <tr>
+                    <td>
+                      <strong>{h.event_title}</strong>
+                    </td>
+                    <td>{formatDate(h.event_date)}</td>
+                    <td>
+                      <div>{formatDateTime(h.start_datetime)}</div>
+                      <div class="muted text-sm">
+                        до {formatDateTime(h.end_datetime)}
+                      </div>
+                    </td>
+                    <td>{h.duration_hours}</td>
+                    <td class="text-semibold">{formatCurrency(h.total_price)}</td>
+                    <td>
+                      {renderStatusBadge(
+                        h.status_display,
+                        HIRE_STATUS_COLORS[h.status] ?? 'gray',
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    )
+
+    // ─── Заголовок ──────────────────────────────────────────
+    const headerByRole: Record<string, { title: string; subtitle: string }> = {
+      renter: {
+        title: 'Мои мероприятия',
+        subtitle: 'Создавайте мероприятия, бронируйте площадки и нанимайте специалистов',
+      },
+      owner: {
+        title: 'Мои площадки',
+        subtitle: 'Управляйте площадками и отслеживайте бронирования',
+      },
+      specialist: {
+        title: 'Мои наймы',
+        subtitle: 'Мероприятия, на которые вас пригласили',
+      },
+      admin: {
+        title: 'Дашборд',
+        subtitle: 'Администрирование платформы',
+      },
+      unknown: {
+        title: 'Дашборд',
+        subtitle: 'Профиль без роли — обратитесь к администратору',
+      },
+    }
+
+    return () => {
+      const header = headerByRole[userRole.value] ?? headerByRole.unknown
+
+      return (
+        <div class="dashboard-page">
+          <div class="container">
+            <div class="dashboard-header">
+              <div>
+                <h1 class="dashboard-title">{header.title}</h1>
+                <p class="dashboard-subtitle">{header.subtitle}</p>
+              </div>
+              <div class="role-badge">{userRoleDisplay.value}</div>
+            </div>
+
+            {loading.value && (
+              <div class="empty-state">
+                <div class="spinner"></div>
+                <p>Загрузка данных…</p>
+              </div>
+            )}
+
+            {!loading.value && errorMessage.value && (
+              <div class="empty-state">
+                <p>{errorMessage.value}</p>
+              </div>
+            )}
+
+            {!loading.value && !errorMessage.value && (
+              <>
+                {userRole.value === 'renter' && renderRenter()}
+                {userRole.value === 'owner' && renderOwner()}
+                {userRole.value === 'specialist' && renderSpecialist()}
+                {(userRole.value === 'admin' || userRole.value === 'unknown') && (
+                  <div class="empty-state">
+                    <p>Для вашей роли дашборд пока не настроен.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )
+    }
   },
 })

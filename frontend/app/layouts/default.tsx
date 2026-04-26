@@ -16,6 +16,20 @@ export default defineComponent({
       router.push(path)
     }
 
+    const logout = async () => {
+      const refresh = $api.getRefreshToken()
+      if (refresh) {
+        try {
+          await $api.post(API_ENDPOINTS.auth.logout, { refresh })
+        } catch {
+          // Токен мог быть уже невалидным — всё равно очищаем локальное состояние
+        }
+      }
+      $api.clearTokens()
+      userStore.clearUser()
+      router.push('/')
+    }
+
     onMounted(async () => {
       // Если пользователь ещё не загружен, пробуем получить данные
       if (!userStore.isAuthenticated) {
@@ -52,6 +66,9 @@ export default defineComponent({
                     <span class="user-greeting">
                       {userStore.user?.first_name || userStore.user?.email}
                     </span>
+                    <button class="btn btn--secondary btn--sm" onClick={logout}>
+                      Выйти
+                    </button>
                   </>
                 ) : (
                   <button class="btn btn--primary btn--sm" onClick={() => navigate('/auth/login')}>

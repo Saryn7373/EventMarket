@@ -32,6 +32,7 @@ class _RenterShortSerializer(serializers.Serializer):
 # ─────────────────────────────────────────────────────────────
 
 class HireListSerializer(serializers.ModelSerializer):
+    event_id = serializers.UUIDField(source="event.id", read_only=True)
     event_title = serializers.CharField(source="event.title", read_only=True)
     event_date = serializers.DateField(source="event.date", read_only=True)
     specialist_name = serializers.SerializerMethodField()
@@ -43,6 +44,7 @@ class HireListSerializer(serializers.ModelSerializer):
         model = Hire
         fields = [
             "id",
+            "event_id",
             "event_title",
             "event_date",
             "specialist_name",

@@ -1,0 +1,54 @@
+/* ============================================
+   Auth Layouts
+   ============================================ */
+
+.layout-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-gray-50) 100%);
+  padding: var(--spacing-xl);
+}
+
+.auth-container {
+  width: 100%;
+  max-width: 480px;
+}
+
+.auth-header {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.auth-logo {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.auth-logo:hover {
+  color: var(--color-primary-hover);
+}
+
+.auth-card {
+  padding: var(--spacing-2xl);
+}
+
+.auth-footer-text {
+  text-align: center;
+  margin-top: var(--spacing-xl);
+  font-size: 0.875rem;
+  color: var(--color-gray-500);
+}
+
+@media (max-width: 640px) {
+  .auth-container {
+    padding: var(--spacing-md);
+  }
+
+  .auth-card {
+    padding: var(--spacing-lg);
+  }
+}

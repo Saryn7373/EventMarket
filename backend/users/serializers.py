@@ -59,12 +59,34 @@ class RegisterSerializer(serializers.Serializer):
 # ────────────────────────────────────────────────
 
 class MeSerializer(serializers.ModelSerializer):
-    role = serializers.CharField(read_only=True)
+    role = serializers.SerializerMethodField()
+    role_display = serializers.SerializerMethodField()
 
     class Meta:
         model  = BaseUser
-        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'date_joined']
-        read_only_fields = ['id', 'email', 'role', 'date_joined']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'role_display', 'date_joined']
+        read_only_fields = ['id', 'email', 'role', 'role_display', 'date_joined']
+
+    def get_role(self, obj):
+        if obj.is_superuser or obj.is_staff:
+            return 'admin'
+        if obj.is_renter:
+            return 'renter'
+        if obj.is_owner:
+            return 'owner'
+        if obj.is_specialist:
+            return 'specialist'
+        return 'unknown'
+
+    def get_role_display(self, obj):
+        labels = {
+            'renter':     'Арендатор',
+            'owner':      'Владелец',
+            'specialist': 'Специалист',
+            'admin':      'Администратор',
+            'unknown':    'Без роли',
+        }
+        return labels[self.get_role(obj)]
 
 
 # ────────────────────────────────────────────────

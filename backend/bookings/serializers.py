@@ -40,8 +40,10 @@ class _RenterShortSerializer(serializers.Serializer):
 # ─────────────────────────────────────────────────────────────
 
 class BookingListSerializer(serializers.ModelSerializer):
+    venue_id = serializers.UUIDField(source="venue.id", read_only=True)
     venue_name = serializers.CharField(source="venue.name", read_only=True)
     venue_city = serializers.CharField(source="venue.city", read_only=True)
+    event_id = serializers.UUIDField(source="event.id", read_only=True)
     event_title = serializers.CharField(source="event.title", read_only=True)
     event_date = serializers.DateField(source="event.date", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
@@ -51,8 +53,10 @@ class BookingListSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             "id",
+            "venue_id",
             "venue_name",
             "venue_city",
+            "event_id",
             "event_title",
             "event_date",
             "start_datetime",

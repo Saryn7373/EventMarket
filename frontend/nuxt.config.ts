@@ -11,7 +11,24 @@ export default defineNuxtConfig({
   ],
 
   // CSS
-  css: ['~/assets/css/main.css'],
+  // Все стили перечислены здесь, чтобы они попадали в инициальный HTML
+  // и не было FOUC при жёсткой перезагрузке (CSS-импорты из TSX-файлов
+  // Nuxt inline-стилями SSR не всегда подхватывает, в отличие от .vue SFC).
+  // Сами файлы по-прежнему лежат рядом со своими компонентами/страницами.
+  css: [
+    '~/assets/css/main.css',
+    '~/layouts/default.css',
+    '~/layouts/auth.css',
+    '~/pages/index.css',
+    '~/pages/auth/login.css',
+    '~/pages/auth/register.css',
+    '~/pages/dashboard/index.css',
+    '~/pages/profile/index.css',
+    '~/components/ui/Button.css',
+    '~/components/ui/Input.css',
+    '~/components/ui/Select.css',
+    '~/components/ui/Alert.css',
+  ],
 
   // App настройки
   app: {
