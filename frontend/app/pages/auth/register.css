@@ -25,17 +25,25 @@
 }
 
 .register-subtitle {
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
   margin-bottom: var(--spacing-xl);
   text-align: center;
 }
 
 /* Карточки ролей */
+.role-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--spacing-xl) 0;
+}
+
 .role-cards {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .role-card {
@@ -44,7 +52,7 @@
   gap: var(--spacing-md);
   padding: var(--spacing-lg);
   background-color: var(--color-white);
-  border: 2px solid var(--color-gray-200);
+  border: 0.125rem solid var(--color-gray-200);
   border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -59,7 +67,17 @@
 .role-card--selected {
   border-color: var(--color-primary);
   background-color: var(--color-primary-light);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 0 0 0.1875rem rgba(67, 56, 202, 0.15);
+}
+
+/* Когда внутри role-card сфокусирован радио-инпут — подсвечиваем всю карточку */
+.role-card:focus-within {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.role-card-input {
+  /* Скрыт через .sr-only — фокус ловится через :focus-within */
 }
 
 .role-card-icon {
@@ -67,29 +85,23 @@
   flex-shrink: 0;
 }
 
+.role-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+}
+
 .role-card-label {
   font-size: 1.125rem;
   font-weight: 600;
-  margin: 0;
   color: var(--color-gray-900);
 }
 
 .role-card-desc {
   font-size: 0.875rem;
-  color: var(--color-gray-600);
-  margin: 0;
-  flex: 1;
+  color: var(--color-gray-700);
   line-height: 1.5;
-}
-
-.role-card-radio {
-  flex-shrink: 0;
-}
-
-.role-card-radio input[type="radio"] {
-  width: 1.25rem;
-  height: 1.25rem;
-  cursor: pointer;
 }
 
 /* Навигация между шагами */
@@ -97,6 +109,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
   background-color: var(--color-gray-50);
@@ -111,16 +125,18 @@
   font-weight: 500;
   cursor: pointer;
   padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
   transition: color var(--transition-fast);
 }
 
 .step-back:hover {
   color: var(--color-primary-hover);
+  text-decoration: underline;
 }
 
 .step-label {
   font-size: 0.875rem;
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
 }
 
 .step-label strong {
@@ -151,6 +167,7 @@
   font-weight: 600;
   margin-bottom: var(--spacing-lg);
   color: var(--color-gray-900);
+  padding: 0;
 }
 
 .form-row {
@@ -169,10 +186,14 @@
   margin-top: var(--spacing-lg);
   text-align: center;
   font-size: 0.875rem;
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
 }
 
-@media (max-width: 640px) {
+.register-footer p {
+  margin: 0;
+}
+
+@media (max-width: 40rem) {
   .form-row {
     grid-template-columns: 1fr;
   }

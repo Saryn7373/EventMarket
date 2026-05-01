@@ -22,9 +22,9 @@
 
 .hero-subtitle {
   font-size: 1.25rem;
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
   margin-bottom: var(--spacing-xl);
-  max-width: 600px;
+  max-width: 37.5rem;
   margin-left: auto;
   margin-right: auto;
 }
@@ -42,8 +42,11 @@
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
   gap: var(--spacing-lg);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .feature-card {
@@ -57,11 +60,11 @@
 }
 
 .feature-text {
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
   line-height: 1.6;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 40rem) {
   .hero-title {
     font-size: 2.5rem;
   }

@@ -36,11 +36,19 @@
   padding: var(--spacing-2xl);
 }
 
+.auth-footer {
+  margin-top: var(--spacing-xl);
+}
+
 .auth-footer-text {
   text-align: center;
-  margin-top: var(--spacing-xl);
   font-size: 0.875rem;
-  color: var(--color-gray-500);
+  color: var(--color-gray-700);
+  margin: 0;
+}
+
+.auth-card:focus {
+  outline: none;
 }
 
 @media (max-width: 640px) {

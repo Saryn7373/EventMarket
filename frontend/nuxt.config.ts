@@ -33,6 +33,7 @@ export default defineNuxtConfig({
   // App настройки
   app: {
     head: {
+      htmlAttrs: { lang: 'ru' },
       title: 'EventMarket',
       meta: [
         { charset: 'utf-8' },

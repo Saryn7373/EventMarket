@@ -5,9 +5,9 @@ export default defineComponent({
   setup() {
     return () => (
       <div class="home-page">
-        <section class="hero">
+        <section class="hero" aria-labelledby="hero-title">
           <div class="container">
-            <h1 class="hero-title">
+            <h1 id="hero-title" class="hero-title">
               EventMarket
             </h1>
             <p class="hero-subtitle">
@@ -24,28 +24,37 @@ export default defineComponent({
           </div>
         </section>
 
-        <section class="features">
+        <section class="features" aria-labelledby="features-title">
           <div class="container">
-            <div class="features-grid">
-              <div class="feature-card card">
-                <h3 class="feature-title">🏛️ Площадки</h3>
+            <h2 id="features-title" class="sr-only">
+              Возможности платформы
+            </h2>
+            <ul class="features-grid">
+              <li class="feature-card card">
+                <h3 class="feature-title">
+                  <span aria-hidden="true">🏛️</span> Площадки
+                </h3>
                 <p class="feature-text">
                   Более 100 площадок для любого типа мероприятий — от конференций до свадеб
                 </p>
-              </div>
-              <div class="feature-card card">
-                <h3 class="feature-title">🎉 Мероприятия</h3>
+              </li>
+              <li class="feature-card card">
+                <h3 class="feature-title">
+                  <span aria-hidden="true">🎉</span> Мероприятия
+                </h3>
                 <p class="feature-text">
                   Создавайте и управляйте мероприятиями, бронируйте площадки в один клик
                 </p>
-              </div>
-              <div class="feature-card card">
-                <h3 class="feature-title">🤝 Специалисты</h3>
+              </li>
+              <li class="feature-card card">
+                <h3 class="feature-title">
+                  <span aria-hidden="true">🤝</span> Специалисты
+                </h3>
                 <p class="feature-text">
                   Нанимайте фотографов, ведущих, DJ и других специалистов
                 </p>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
         </section>
       </div>

@@ -121,17 +121,23 @@ export default defineComponent({
     return () => (
       <div class="dashboard-hires-page">
         <div class="container">
-          <div class="page-header">
+          <header class="page-header">
             <div>
-              <h1 class="page-title">Мои наймы специалистов</h1>
+              <h1 id="hires-page-title" class="page-title">Мои наймы специалистов</h1>
               <p class="page-subtitle">Управление наймами специалистов</p>
             </div>
-          </div>
+          </header>
 
           {/* Фильтры */}
-          <div class="filters-bar">
+          <form
+            class="filters-bar"
+            role="search"
+            aria-label="Фильтры наймов"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <div class="filter-item">
               <UiSelect
+                id="hires-filter-status"
                 label="Статус"
                 modelValue={statusFilter.value}
                 onUpdate:modelValue={(val: any) => {
@@ -144,6 +150,7 @@ export default defineComponent({
 
             <div class="filter-item">
               <UiSelect
+                id="hires-filter-ordering"
                 label="Сортировка"
                 modelValue={ordering.value}
                 onUpdate:modelValue={(val: any) => {
@@ -153,25 +160,25 @@ export default defineComponent({
                 options={orderingOptions.value}
               />
             </div>
-          </div>
+          </form>
 
           {/* Контент */}
           {loading.value ? (
-            <div class="loading-state">
-              <div class="spinner"></div>
+            <div class="loading-state" role="status" aria-live="polite">
+              <div class="spinner" aria-hidden="true"></div>
               <p>Загрузка наймов...</p>
             </div>
           ) : error.value ? (
-            <div class="error-state">
+            <div class="error-state" role="alert">
               <p class="error-text">{error.value}</p>
-              <button class="btn btn--primary" onClick={loadHires}>
+              <button type="button" class="btn btn--primary" onClick={loadHires}>
                 Повторить
               </button>
             </div>
           ) : hires.value.length === 0 ? (
             <div class="empty-state">
-              <div class="empty-icon">👥</div>
-              <h3>Нет наймов специалистов</h3>
+              <div class="empty-icon" aria-hidden="true">👥</div>
+              <h2>Нет наймов специалистов</h2>
               <p>У вас пока нет нанятых специалистов</p>
               <a href="/specialists" class="btn btn--primary">
                 Найти специалиста
@@ -179,76 +186,92 @@ export default defineComponent({
             </div>
           ) : (
             <>
-              <div class="results-info">
+              <div class="results-info" aria-live="polite">
                 Найдено: {totalCount.value} наймов
               </div>
 
-              <div class="hires-grid">
-                {hires.value.map((hire) => (
-                  <div class="hire-card card">
-                    <div class="hire-header">
-                      <div>
-                        <h3 class="hire-title">{hire.specialist_name}</h3>
-                        <div class="hire-specialty">{hire.specialist_specialty}</div>
-                      </div>
-                      <span
-                        class="status-badge"
-                        style={{ backgroundColor: getStatusColor(hire.status) }}
-                      >
-                        {getStatusLabel(hire.status)}
-                      </span>
-                    </div>
+              <ul class="hires-grid" aria-labelledby="hires-page-title">
+                {hires.value.map((hire) => {
+                  const cardTitleId = `hire-${hire.id}-title`
+                  return (
+                    <li>
+                      <article class="hire-card card" aria-labelledby={cardTitleId}>
+                        <div class="hire-header">
+                          <div>
+                            <h3 id={cardTitleId} class="hire-title">{hire.specialist_name}</h3>
+                            <div class="hire-specialty">{hire.specialist_specialty}</div>
+                          </div>
+                          <span
+                            class="status-badge"
+                            style={{ backgroundColor: getStatusColor(hire.status) }}
+                          >
+                            <span class="sr-only">Статус: </span>
+                            {getStatusLabel(hire.status)}
+                          </span>
+                        </div>
 
-                    <div class="hire-body">
-                      <div class="hire-detail">
-                        <span class="detail-label">Мероприятие:</span>
-                        <span class="detail-value">{hire.event_title}</span>
-                      </div>
-                      <div class="hire-detail">
-                        <span class="detail-label">Дата:</span>
-                        <span class="detail-value">
-                          {formatDate(hire.start_datetime)} — {formatDate(hire.end_datetime)}
-                        </span>
-                      </div>
-                      <div class="hire-detail">
-                        <span class="detail-label">Длительность:</span>
-                        <span class="detail-value">{hire.duration_hours} ч</span>
-                      </div>
-                    </div>
+                        <dl class="hire-body">
+                          <div class="hire-detail">
+                            <dt class="detail-label">Мероприятие:</dt>
+                            <dd class="detail-value">{hire.event_title}</dd>
+                          </div>
+                          <div class="hire-detail">
+                            <dt class="detail-label">Дата:</dt>
+                            <dd class="detail-value">
+                              {formatDate(hire.start_datetime)} — {formatDate(hire.end_datetime)}
+                            </dd>
+                          </div>
+                          <div class="hire-detail">
+                            <dt class="detail-label">Длительность:</dt>
+                            <dd class="detail-value">{hire.duration_hours} ч</dd>
+                          </div>
+                        </dl>
 
-                    <div class="hire-footer">
-                      <div class="hire-price">{formatCurrency(hire.total_price)}</div>
-                      <div class="hire-actions">
-                        <a href={`/dashboard/hires/${hire.id}`} class="btn btn--sm btn--outline">
-                          Подробнее
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        <div class="hire-footer">
+                          <div class="hire-price" aria-label={`Сумма: ${formatCurrency(hire.total_price)}`}>
+                            {formatCurrency(hire.total_price)}
+                          </div>
+                          <div class="hire-actions">
+                            <a
+                              href={`/dashboard/hires/${hire.id}`}
+                              class="btn btn--sm btn--outline"
+                              aria-label={`Подробнее о найме специалиста ${hire.specialist_name}`}
+                            >
+                              Подробнее
+                            </a>
+                          </div>
+                        </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
 
               {/* Пагинация */}
               {totalPages.value > 1 && (
-                <div class="pagination">
+                <nav class="pagination" aria-label="Пагинация наймов">
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === 1}
                     onClick={() => handlePageChange(currentPage.value - 1)}
+                    aria-label="Предыдущая страница"
                   >
-                    ← Назад
+                    <span aria-hidden="true">←</span> Назад
                   </button>
-                  <span class="pagination-info">
+                  <span class="pagination-info" aria-current="page">
                     Страница {currentPage.value} из {totalPages.value}
                   </span>
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === totalPages.value}
                     onClick={() => handlePageChange(currentPage.value + 1)}
+                    aria-label="Следующая страница"
                   >
-                    Вперед →
+                    Вперед <span aria-hidden="true">→</span>
                   </button>
-                </div>
+                </nav>
               )}
             </>
           )}

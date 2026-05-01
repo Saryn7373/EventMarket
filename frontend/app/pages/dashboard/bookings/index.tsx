@@ -122,17 +122,23 @@ export default defineComponent({
     return () => (
       <div class="dashboard-bookings-page">
         <div class="container">
-          <div class="page-header">
+          <header class="page-header">
             <div>
-              <h1 class="page-title">Мои бронирования</h1>
+              <h1 id="bookings-page-title" class="page-title">Мои бронирования</h1>
               <p class="page-subtitle">Управление бронированиями площадок</p>
             </div>
-          </div>
+          </header>
 
           {/* Фильтры */}
-          <div class="filters-bar">
+          <form
+            class="filters-bar"
+            role="search"
+            aria-label="Фильтры бронирований"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <div class="filter-item">
               <UiSelect
+                id="bookings-filter-status"
                 label="Статус"
                 modelValue={statusFilter.value}
                 onUpdate:modelValue={(val: any) => {
@@ -145,6 +151,7 @@ export default defineComponent({
 
             <div class="filter-item">
               <UiSelect
+                id="bookings-filter-ordering"
                 label="Сортировка"
                 modelValue={ordering.value}
                 onUpdate:modelValue={(val: any) => {
@@ -154,25 +161,25 @@ export default defineComponent({
                 options={orderingOptions.value}
               />
             </div>
-          </div>
+          </form>
 
           {/* Контент */}
           {loading.value ? (
-            <div class="loading-state">
-              <div class="spinner"></div>
+            <div class="loading-state" role="status" aria-live="polite">
+              <div class="spinner" aria-hidden="true"></div>
               <p>Загрузка бронирований...</p>
             </div>
           ) : error.value ? (
-            <div class="error-state">
+            <div class="error-state" role="alert">
               <p class="error-text">{error.value}</p>
-              <button class="btn btn--primary" onClick={loadBookings}>
+              <button type="button" class="btn btn--primary" onClick={loadBookings}>
                 Повторить
               </button>
             </div>
           ) : bookings.value.length === 0 ? (
             <div class="empty-state">
-              <div class="empty-icon">📅</div>
-              <h3>Нет бронирований</h3>
+              <div class="empty-icon" aria-hidden="true">📅</div>
+              <h2>Нет бронирований</h2>
               <p>У вас пока нет бронирований площадок</p>
               <a href="/venues" class="btn btn--primary">
                 Найти площадку
@@ -180,77 +187,96 @@ export default defineComponent({
             </div>
           ) : (
             <>
-              <div class="results-info">
+              <div class="results-info" aria-live="polite">
                 Найдено: {totalCount.value} бронирований
               </div>
 
-              <div class="bookings-grid">
-                {bookings.value.map((booking) => (
-                  <div class="booking-card card">
-                    <div class="booking-header">
-                      <h3 class="booking-title">{booking.venue_name}</h3>
-                      <span
-                        class="status-badge"
-                        style={{ backgroundColor: getStatusColor(booking.status) }}
-                      >
-                        {getStatusLabel(booking.status)}
-                      </span>
-                    </div>
+              <ul
+                class="bookings-grid"
+                aria-labelledby="bookings-page-title"
+              >
+                {bookings.value.map((booking) => {
+                  const cardTitleId = `booking-${booking.id}-title`
+                  return (
+                    <li>
+                      <article class="booking-card card" aria-labelledby={cardTitleId}>
+                        <div class="booking-header">
+                          <h3 id={cardTitleId} class="booking-title">{booking.venue_name}</h3>
+                          <span
+                            class="status-badge"
+                            style={{ backgroundColor: getStatusColor(booking.status) }}
+                          >
+                            <span class="sr-only">Статус: </span>
+                            {getStatusLabel(booking.status)}
+                          </span>
+                        </div>
 
-                    <div class="booking-body">
-                      <div class="booking-detail">
-                        <span class="detail-label">Город:</span>
-                        <span class="detail-value">{booking.venue_city}</span>
-                      </div>
-                      <div class="booking-detail">
-                        <span class="detail-label">Мероприятие:</span>
-                        <span class="detail-value">{booking.event_title}</span>
-                      </div>
-                      <div class="booking-detail">
-                        <span class="detail-label">Дата:</span>
-                        <span class="detail-value">
-                          {formatDate(booking.start_datetime)} — {formatDate(booking.end_datetime)}
-                        </span>
-                      </div>
-                      <div class="booking-detail">
-                        <span class="detail-label">Длительность:</span>
-                        <span class="detail-value">{booking.duration_hours} ч</span>
-                      </div>
-                    </div>
+                        <dl class="booking-body">
+                          <div class="booking-detail">
+                            <dt class="detail-label">Город:</dt>
+                            <dd class="detail-value">{booking.venue_city}</dd>
+                          </div>
+                          <div class="booking-detail">
+                            <dt class="detail-label">Мероприятие:</dt>
+                            <dd class="detail-value">{booking.event_title}</dd>
+                          </div>
+                          <div class="booking-detail">
+                            <dt class="detail-label">Дата:</dt>
+                            <dd class="detail-value">
+                              {formatDate(booking.start_datetime)} — {formatDate(booking.end_datetime)}
+                            </dd>
+                          </div>
+                          <div class="booking-detail">
+                            <dt class="detail-label">Длительность:</dt>
+                            <dd class="detail-value">{booking.duration_hours} ч</dd>
+                          </div>
+                        </dl>
 
-                    <div class="booking-footer">
-                      <div class="booking-price">{formatCurrency(booking.total_price)}</div>
-                      <div class="booking-actions">
-                        <a href={`/dashboard/bookings/${booking.id}`} class="btn btn--sm btn--outline">
-                          Подробнее
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        <div class="booking-footer">
+                          <div class="booking-price" aria-label={`Сумма: ${formatCurrency(booking.total_price)}`}>
+                            {formatCurrency(booking.total_price)}
+                          </div>
+                          <div class="booking-actions">
+                            <a
+                              href={`/dashboard/bookings/${booking.id}`}
+                              class="btn btn--sm btn--outline"
+                              aria-label={`Подробнее о бронировании ${booking.venue_name}`}
+                            >
+                              Подробнее
+                            </a>
+                          </div>
+                        </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
 
               {/* Пагинация */}
               {totalPages.value > 1 && (
-                <div class="pagination">
+                <nav class="pagination" aria-label="Пагинация бронирований">
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === 1}
                     onClick={() => handlePageChange(currentPage.value - 1)}
+                    aria-label="Предыдущая страница"
                   >
-                    ← Назад
+                    <span aria-hidden="true">←</span> Назад
                   </button>
-                  <span class="pagination-info">
+                  <span class="pagination-info" aria-current="page">
                     Страница {currentPage.value} из {totalPages.value}
                   </span>
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === totalPages.value}
                     onClick={() => handlePageChange(currentPage.value + 1)}
+                    aria-label="Следующая страница"
                   >
-                    Вперед →
+                    Вперед <span aria-hidden="true">→</span>
                   </button>
-                </div>
+                </nav>
               )}
             </>
           )}

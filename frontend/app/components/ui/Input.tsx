@@ -1,5 +1,8 @@
 import { defineComponent, type PropType, computed, ref } from 'vue'
 
+let uidCounter = 0
+const nextUid = () => `ui-input-${++uidCounter}`
+
 export default defineComponent({
   name: 'UiInput',
   props: {
@@ -23,6 +26,10 @@ export default defineComponent({
       type: String,
       default: '',
     },
+    hint: {
+      type: String,
+      default: '',
+    },
     required: {
       type: Boolean,
       default: false,
@@ -31,10 +38,28 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    id: {
+      type: String,
+      default: '',
+    },
+    autocomplete: {
+      type: String,
+      default: '',
+    },
   },
   emits: ['update:modelValue'],
   setup(props, { emit, slots }) {
     const isFocused = ref(false)
+    const inputId = computed(() => props.id || nextUid())
+    const errorId = computed(() => `${inputId.value}-error`)
+    const hintId = computed(() => `${inputId.value}-hint`)
+
+    const describedBy = computed(() => {
+      const ids: string[] = []
+      if (props.hint) ids.push(hintId.value)
+      if (props.error) ids.push(errorId.value)
+      return ids.length ? ids.join(' ') : undefined
+    })
 
     const classes = computed(() => [
       'input',
@@ -50,30 +75,57 @@ export default defineComponent({
 
     return () => (
       <div class="input-wrapper">
-        <label class="input-label">
+        <label class="input-label" for={inputId.value}>
           {props.label}
-          {props.required && <span class="input-required">*</span>}
+          {props.required && (
+            <>
+              <span class="input-required" aria-hidden="true">*</span>
+              <span class="sr-only"> (обязательно)</span>
+            </>
+          )}
         </label>
 
         <div class="input-container">
-          {slots.prefix && <span class="input-prefix">{slots.prefix()}</span>}
+          {slots.prefix && (
+            <span class="input-prefix" aria-hidden="true">
+              {slots.prefix()}
+            </span>
+          )}
 
           <input
+            id={inputId.value}
             class={classes.value}
             type={props.type}
             value={props.modelValue}
             placeholder={props.placeholder}
             disabled={props.disabled}
             required={props.required}
+            autocomplete={props.autocomplete || undefined}
+            aria-invalid={props.error ? 'true' : undefined}
+            aria-describedby={describedBy.value}
             onInput={onInput}
             onFocus={() => (isFocused.value = true)}
             onBlur={() => (isFocused.value = false)}
           />
 
-          {slots.suffix && <span class="input-suffix">{slots.suffix()}</span>}
+          {slots.suffix && (
+            <span class="input-suffix" aria-hidden="true">
+              {slots.suffix()}
+            </span>
+          )}
         </div>
 
-        {props.error && <p class="input-error">{props.error}</p>}
+        {props.hint && !props.error && (
+          <p class="input-hint" id={hintId.value}>
+            {props.hint}
+          </p>
+        )}
+
+        {props.error && (
+          <p class="input-error" id={errorId.value} role="alert">
+            {props.error}
+          </p>
+        )}
       </div>
     )
   },

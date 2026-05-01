@@ -11,7 +11,7 @@
   margin-bottom: var(--spacing-sm);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-gray-700);
+  color: var(--color-gray-800);
 }
 
 .select-required {
@@ -44,6 +44,11 @@
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
+.select:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .select--error {
   border-color: var(--color-danger);
 }
@@ -56,13 +61,13 @@
 
 .select-description {
   margin-top: var(--spacing-sm);
-  font-size: 0.75rem;
-  color: var(--color-gray-500);
+  font-size: 0.8125rem;
+  color: var(--color-gray-700);
   line-height: 1.5;
 }
 
 .select-error {
   margin-top: var(--spacing-xs);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--color-danger);
 }

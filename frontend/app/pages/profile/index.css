@@ -11,55 +11,6 @@
   margin-bottom: var(--spacing-xl);
 }
 
-.page-title {
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: var(--color-gray-900);
-}
-
-.profile-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: var(--spacing-lg);
-}
-
-.profile-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg);
-}
-
-.profile-section .form-group {
-  margin-bottom: var(--spacing-md);
-}
-
-.profile-section--danger {
-  border-color: var(--color-danger);
-}
-
-.section-title--danger {
-  color: var(--color-danger);
-}
-
-@media (max-width: 640px) {
-  .profile-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ============================================
-   Profile Page
-   ============================================ */
-
-.profile-page {
-  display: flex;
-  flex-direction: column;
-}
-
-.profile-header {
-  margin-bottom: var(--spacing-xl);
-}
-
 .profile-title {
   font-size: 2rem;
   font-weight: 700;
@@ -69,22 +20,21 @@
 
 .profile-subtitle {
   font-size: 1rem;
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
 }
 
 .profile-content {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
   gap: var(--spacing-lg);
 }
 
 .profile-section {
-  composes: card;
   display: flex;
   flex-direction: column;
 }
 
-.profile-section:first-child {
+.profile-section:first-of-type {
   grid-column: 1 / -1;
 }
 
@@ -93,12 +43,15 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
 }
 
 .section-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--color-gray-900);
+  margin: 0;
 }
 
 /* Аватар */
@@ -109,8 +62,8 @@
 }
 
 .avatar-circle {
-  width: 80px;
-  height: 80px;
+  width: 5rem;
+  height: 5rem;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   color: var(--color-white);
@@ -122,11 +75,12 @@
   box-shadow: var(--shadow-md);
 }
 
-/* Информация профиля */
+/* Информация профиля (dl) */
 .profile-info {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
+  margin: 0;
 }
 
 .info-row {
@@ -135,28 +89,29 @@
   gap: var(--spacing-md);
 }
 
-.info-row--edit {
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
 .info-label {
-  min-width: 160px;
+  min-width: 10rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
+  margin: 0;
 }
 
 .info-value {
   flex: 1;
   font-size: 0.9375rem;
   color: var(--color-gray-900);
+  margin: 0;
 }
 
-.info-divider {
-  height: 1px;
-  background-color: var(--color-gray-200);
-  margin: var(--spacing-sm) 0;
+/* Форма редактирования личных данных */
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--color-gray-200);
 }
 
 /* Действия с профилем */
@@ -164,6 +119,7 @@
   display: flex;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 /* Роль */
@@ -172,9 +128,9 @@
   align-items: center;
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   background-color: var(--color-primary-light);
-  color: var(--color-primary);
+  color: var(--color-primary-hover);
   border-radius: var(--radius-full);
 }
 
@@ -182,24 +138,14 @@
 .password-form {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.field-error {
-  margin-top: var(--spacing-xs);
-  font-size: 0.75rem;
-  color: var(--color-danger);
+  gap: var(--spacing-sm);
 }
 
 .form-actions {
   display: flex;
   gap: var(--spacing-sm);
   margin-top: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .security-info {
@@ -212,14 +158,15 @@
 .security-info p {
   margin: 0;
   font-size: 0.875rem;
-  color: var(--color-gray-600);
+  color: var(--color-gray-800);
 }
 
-/* Статистика аккаунта */
+/* Статистика аккаунта (dl) */
 .account-stats {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
+  margin: 0;
 }
 
 .stat-row {
@@ -236,22 +183,24 @@
 
 .stat-label {
   font-size: 0.875rem;
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
+  margin: 0;
 }
 
 .stat-value {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--color-gray-900);
+  margin: 0;
 }
 
 /* Адаптив для профиля */
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .profile-content {
     grid-template-columns: 1fr;
   }
 
-  .profile-section:first-child {
+  .profile-section:first-of-type {
     grid-column: auto;
   }
 
@@ -264,10 +213,7 @@
     min-width: auto;
   }
 
-  .info-actions {
-    flex-direction: column;
-  }
-
+  .info-actions,
   .form-actions {
     flex-direction: column;
   }

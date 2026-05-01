@@ -71,6 +71,31 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
         if self.is_specialist: return "Специалист"
         return "Без роли"
 
+class UserImage(models.Model):
+    """
+    Аватар пользователя — один на пользователя.
+    Сделано по образцу VenueImage.
+    """
+    user = models.OneToOneField(
+        BaseUser,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='avatar',
+        verbose_name=_("пользователь"),
+    )
+    image = models.ImageField(_("фото"), upload_to='users/%Y/%m/')
+    created_at = models.DateTimeField(_("создано"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("обновлено"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("аватар пользователя")
+        verbose_name_plural = _("аватары пользователей")
+
+    def __str__(self):
+        return f"Аватар: {self.user.email}"
+
+# ROLES
+
 class Renter(models.Model):
     """
     Профиль Арендатора
@@ -109,29 +134,6 @@ class Owner(models.Model):
 
     def __str__(self):
         return f"Владелец: {self.user.email}"
-
-class UserImage(models.Model):
-    """
-    Аватар пользователя — один на пользователя.
-    Сделано по образцу VenueImage.
-    """
-    user = models.OneToOneField(
-        BaseUser,
-        on_delete=models.CASCADE,
-        primary_key=True,
-        related_name='avatar',
-        verbose_name=_("пользователь"),
-    )
-    image = models.ImageField(_("фото"), upload_to='users/%Y/%m/')
-    created_at = models.DateTimeField(_("создано"), auto_now_add=True)
-    updated_at = models.DateTimeField(_("обновлено"), auto_now=True)
-
-    class Meta:
-        verbose_name = _("аватар пользователя")
-        verbose_name_plural = _("аватары пользователей")
-
-    def __str__(self):
-        return f"Аватар: {self.user.email}"
 
 
 class Specialist(models.Model):

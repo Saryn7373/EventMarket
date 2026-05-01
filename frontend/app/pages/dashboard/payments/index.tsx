@@ -119,10 +119,10 @@ export default defineComponent({
       return PAYMENT_STATUS[status] || status
     }
 
-    const getTargetLabel = (targetType: string | null): string => {
-      if (targetType === 'booking') return '📅 Бронирование'
-      if (targetType === 'hire') return '👥 Найм'
-      return '—'
+    const getTargetLabel = (targetType: string | null): { icon: string; label: string } => {
+      if (targetType === 'booking') return { icon: '📅', label: 'Бронирование' }
+      if (targetType === 'hire') return { icon: '👥', label: 'Найм' }
+      return { icon: '', label: '—' }
     }
 
     onMounted(() => {
@@ -132,33 +132,39 @@ export default defineComponent({
     return () => (
       <div class="dashboard-payments-page">
         <div class="container">
-          <div class="page-header">
+          <header class="page-header">
             <div>
-              <h1 class="page-title">Мои платежи</h1>
+              <h1 id="payments-page-title" class="page-title">Мои платежи</h1>
               <p class="page-subtitle">История платежей и транзакций</p>
             </div>
-          </div>
+          </header>
 
           {/* Сводка */}
           {!loading.value && payments.value.length > 0 && (
-            <div class="payments-summary">
+            <dl class="payments-summary" aria-label="Сводка по платежам">
               <div class="summary-item">
-                <div class="summary-label">Всего платежей</div>
-                <div class="summary-value">{totalCount.value}</div>
+                <dt class="summary-label">Всего платежей</dt>
+                <dd class="summary-value">{totalCount.value}</dd>
               </div>
               <div class="summary-item">
-                <div class="summary-label">Общая сумма</div>
-                <div class="summary-value summary-value--accent">
+                <dt class="summary-label">Общая сумма</dt>
+                <dd class="summary-value summary-value--accent">
                   {formatCurrency(totalAmount.value)}
-                </div>
+                </dd>
               </div>
-            </div>
+            </dl>
           )}
 
           {/* Фильтры */}
-          <div class="filters-bar">
+          <form
+            class="filters-bar"
+            role="search"
+            aria-label="Фильтры платежей"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <div class="filter-item">
               <UiSelect
+                id="payments-filter-status"
                 label="Статус"
                 modelValue={statusFilter.value}
                 onUpdate:modelValue={(val: any) => {
@@ -171,6 +177,7 @@ export default defineComponent({
 
             <div class="filter-item">
               <UiSelect
+                id="payments-filter-ordering"
                 label="Сортировка"
                 modelValue={ordering.value}
                 onUpdate:modelValue={(val: any) => {
@@ -180,99 +187,110 @@ export default defineComponent({
                 options={orderingOptions.value}
               />
             </div>
-          </div>
+          </form>
 
           {/* Контент */}
           {loading.value ? (
-            <div class="loading-state">
-              <div class="spinner"></div>
+            <div class="loading-state" role="status" aria-live="polite">
+              <div class="spinner" aria-hidden="true"></div>
               <p>Загрузка платежей...</p>
             </div>
           ) : error.value ? (
-            <div class="error-state">
+            <div class="error-state" role="alert">
               <p class="error-text">{error.value}</p>
-              <button class="btn btn--primary" onClick={loadPayments}>
+              <button type="button" class="btn btn--primary" onClick={loadPayments}>
                 Повторить
               </button>
             </div>
           ) : payments.value.length === 0 ? (
             <div class="empty-state">
-              <div class="empty-icon">💳</div>
-              <h3>Нет платежей</h3>
+              <div class="empty-icon" aria-hidden="true">💳</div>
+              <h2>Нет платежей</h2>
               <p>У вас пока нет платежей</p>
             </div>
           ) : (
             <>
-              <div class="results-info">
+              <div class="results-info" aria-live="polite">
                 Найдено: {totalCount.value} платежей
               </div>
 
               <div class="table-container">
                 <table class="data-table">
+                  <caption class="sr-only">Список платежей</caption>
                   <thead>
                     <tr>
-                      <th>Тип</th>
-                      <th>Сумма</th>
-                      <th>Статус</th>
-                      <th>Дата создания</th>
-                      <th>Дата оплаты</th>
-                      <th>Действия</th>
+                      <th scope="col">Тип</th>
+                      <th scope="col">Сумма</th>
+                      <th scope="col">Статус</th>
+                      <th scope="col">Дата создания</th>
+                      <th scope="col">Дата оплаты</th>
+                      <th scope="col">Действия</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {payments.value.map((payment) => (
-                      <tr>
-                        <td>
-                          <span class="type-badge">
-                            {getTargetLabel(payment.target_type)}
-                          </span>
-                        </td>
-                        <td class="cell-price">{formatCurrency(payment.amount)}</td>
-                        <td>
-                          <span
-                            class="status-badge"
-                            style={{ backgroundColor: getStatusColor(payment.status) }}
-                          >
-                            {getStatusLabel(payment.status)}
-                          </span>
-                        </td>
-                        <td>{formatDate(payment.created_at)}</td>
-                        <td>{payment.paid_at ? formatDate(payment.paid_at) : '—'}</td>
-                        <td>
-                          <a
-                            href={`/dashboard/payments/${payment.id}`}
-                            class="btn btn--sm btn--outline"
-                          >
-                            Подробнее
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
+                    {payments.value.map((payment) => {
+                      const target = getTargetLabel(payment.target_type)
+                      return (
+                        <tr>
+                          <td>
+                            <span class="type-badge">
+                              {target.icon && <span aria-hidden="true">{target.icon} </span>}
+                              {target.label}
+                            </span>
+                          </td>
+                          <td class="cell-price">{formatCurrency(payment.amount)}</td>
+                          <td>
+                            <span
+                              class="status-badge"
+                              style={{ backgroundColor: getStatusColor(payment.status) }}
+                            >
+                              <span class="sr-only">Статус: </span>
+                              {getStatusLabel(payment.status)}
+                            </span>
+                          </td>
+                          <td>{formatDate(payment.created_at)}</td>
+                          <td>{payment.paid_at ? formatDate(payment.paid_at) : '—'}</td>
+                          <td>
+                            <a
+                              href={`/dashboard/payments/${payment.id}`}
+                              class="btn btn--sm btn--outline"
+                              aria-label={`Подробнее о платеже от ${formatDate(payment.created_at)}`}
+                            >
+                              Подробнее
+                            </a>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
 
               {/* Пагинация */}
               {totalPages.value > 1 && (
-                <div class="pagination">
+                <nav class="pagination" aria-label="Пагинация платежей">
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === 1}
                     onClick={() => handlePageChange(currentPage.value - 1)}
+                    aria-label="Предыдущая страница"
                   >
-                    ← Назад
+                    <span aria-hidden="true">←</span> Назад
                   </button>
-                  <span class="pagination-info">
+                  <span class="pagination-info" aria-current="page">
                     Страница {currentPage.value} из {totalPages.value}
                   </span>
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === totalPages.value}
                     onClick={() => handlePageChange(currentPage.value + 1)}
+                    aria-label="Следующая страница"
                   >
-                    Вперед →
+                    Вперед <span aria-hidden="true">→</span>
                   </button>
-                </div>
+                </nav>
               )}
             </>
           )}

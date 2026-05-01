@@ -146,16 +146,19 @@ export default defineComponent({
 
     // ─── Хелперы рендера ────────────────────────────────────
     const renderStatusBadge = (label: string, color: string) => (
-      <span class={`badge badge--${color}`}>{label}</span>
+      <span class={`badge badge--${color}`}>
+        <span class="sr-only">Статус: </span>
+        {label}
+      </span>
     )
 
     const renderEmpty = (icon: string, title: string, hint: string, action?: { label: string; onClick: () => void }) => (
       <div class="empty-state">
-        <div class="empty-state-icon">{icon}</div>
+        <div class="empty-state-icon" aria-hidden="true">{icon}</div>
         <h3 class="empty-state-title">{title}</h3>
         <p>{hint}</p>
         {action && (
-          <button class="btn btn--primary" onClick={action.onClick}>
+          <button type="button" class="btn btn--primary" onClick={action.onClick}>
             {action.label}
           </button>
         )}
@@ -167,10 +170,11 @@ export default defineComponent({
       <>
         <div class="dashboard-toolbar">
           <button
+            type="button"
             class="btn btn--primary"
             onClick={() => router.push('/dashboard/events/new')}
           >
-            + Создать мероприятие
+            <span aria-hidden="true">+</span> Создать мероприятие
           </button>
         </div>
 
@@ -185,100 +189,104 @@ export default defineComponent({
             },
           )
         ) : (
-          <div class="event-list">
+          <ul class="event-list" aria-label="Список ваших мероприятий">
             {myEvents.value.map((event) => {
               const bookings = bookingsByEvent.value.get(event.id) ?? []
               const hires = hiresByEvent.value.get(event.id) ?? []
               const themeIcon = EVENT_THEME_ICONS[event.theme] ?? '📌'
+              const titleId = `event-${event.id}-title`
 
               return (
-                <article
-                  class="event-card"
-                  onClick={() => router.push(`/events/${event.id}`)}
-                >
-                  <header class="event-card-header">
-                    <div class="event-card-title-block">
-                      <h3 class="event-card-title">
-                        <span class="event-card-icon">{themeIcon}</span>
-                        {event.title}
-                      </h3>
-                      <div class="event-card-meta">
-                        <span>{formatDate(event.date)}</span>
-                        <span>·</span>
-                        <span>{event.theme_display}</span>
-                        <span>·</span>
-                        <span>{event.expected_guests} гостей</span>
+                <li>
+                  <article class="event-card" aria-labelledby={titleId}>
+                    <header class="event-card-header">
+                      <div class="event-card-title-block">
+                        <h3 id={titleId} class="event-card-title">
+                          <span class="event-card-icon" aria-hidden="true">{themeIcon}</span>
+                          <a class="event-card-link" href={`/events/${event.id}`}>
+                            {event.title}
+                          </a>
+                        </h3>
+                        <div class="event-card-meta">
+                          <span>{formatDate(event.date)}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{event.theme_display}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{event.expected_guests} гостей</span>
+                        </div>
                       </div>
+                      {renderStatusBadge(
+                        event.status_display,
+                        EVENT_STATUS_COLORS[event.status] ?? 'gray',
+                      )}
+                    </header>
+
+                    <div class="event-card-body">
+                      <section class="event-subsection" aria-label={`Бронирования мероприятия ${event.title}`}>
+                        <h4 class="event-subsection-title">
+                          Бронирования <span class="muted" aria-hidden="true">· {bookings.length}</span>
+                          <span class="sr-only">: {bookings.length}</span>
+                        </h4>
+                        {bookings.length === 0 ? (
+                          <p class="event-subsection-empty">Площадки ещё не забронированы</p>
+                        ) : (
+                          <ul class="event-subsection-list">
+                            {bookings.map((b) => (
+                              <li class="event-subsection-item">
+                                <div class="event-subsection-item-main">
+                                  <strong>{b.venue_name}</strong>
+                                  <span class="muted"> · {b.venue_city}</span>
+                                </div>
+                                <div class="event-subsection-item-meta">
+                                  <span>{formatDateTime(b.start_datetime)}</span>
+                                  <span aria-hidden="true">·</span>
+                                  <span>{formatCurrency(b.total_price)}</span>
+                                </div>
+                                {renderStatusBadge(
+                                  b.status_display,
+                                  BOOKING_STATUS_COLORS[b.status] ?? 'gray',
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </section>
+
+                      <section class="event-subsection" aria-label={`Наймы специалистов мероприятия ${event.title}`}>
+                        <h4 class="event-subsection-title">
+                          Наймы специалистов <span class="muted" aria-hidden="true">· {hires.length}</span>
+                          <span class="sr-only">: {hires.length}</span>
+                        </h4>
+                        {hires.length === 0 ? (
+                          <p class="event-subsection-empty">Специалисты ещё не наняты</p>
+                        ) : (
+                          <ul class="event-subsection-list">
+                            {hires.map((h) => (
+                              <li class="event-subsection-item">
+                                <div class="event-subsection-item-main">
+                                  <strong>{h.specialist_name}</strong>
+                                  <span class="muted"> · {h.specialist_specialty || '—'}</span>
+                                </div>
+                                <div class="event-subsection-item-meta">
+                                  <span>{formatDateTime(h.start_datetime)}</span>
+                                  <span aria-hidden="true">·</span>
+                                  <span>{formatCurrency(h.total_price)}</span>
+                                </div>
+                                {renderStatusBadge(
+                                  h.status_display,
+                                  HIRE_STATUS_COLORS[h.status] ?? 'gray',
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </section>
                     </div>
-                    {renderStatusBadge(
-                      event.status_display,
-                      EVENT_STATUS_COLORS[event.status] ?? 'gray',
-                    )}
-                  </header>
-
-                  <div class="event-card-body">
-                    <section class="event-subsection">
-                      <h4 class="event-subsection-title">
-                        Бронирования <span class="muted">· {bookings.length}</span>
-                      </h4>
-                      {bookings.length === 0 ? (
-                        <p class="event-subsection-empty">Площадки ещё не забронированы</p>
-                      ) : (
-                        <ul class="event-subsection-list">
-                          {bookings.map((b) => (
-                            <li class="event-subsection-item">
-                              <div class="event-subsection-item-main">
-                                <strong>{b.venue_name}</strong>
-                                <span class="muted"> · {b.venue_city}</span>
-                              </div>
-                              <div class="event-subsection-item-meta">
-                                <span>{formatDateTime(b.start_datetime)}</span>
-                                <span>·</span>
-                                <span>{formatCurrency(b.total_price)}</span>
-                              </div>
-                              {renderStatusBadge(
-                                b.status_display,
-                                BOOKING_STATUS_COLORS[b.status] ?? 'gray',
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </section>
-
-                    <section class="event-subsection">
-                      <h4 class="event-subsection-title">
-                        Наймы специалистов <span class="muted">· {hires.length}</span>
-                      </h4>
-                      {hires.length === 0 ? (
-                        <p class="event-subsection-empty">Специалисты ещё не наняты</p>
-                      ) : (
-                        <ul class="event-subsection-list">
-                          {hires.map((h) => (
-                            <li class="event-subsection-item">
-                              <div class="event-subsection-item-main">
-                                <strong>{h.specialist_name}</strong>
-                                <span class="muted"> · {h.specialist_specialty || '—'}</span>
-                              </div>
-                              <div class="event-subsection-item-meta">
-                                <span>{formatDateTime(h.start_datetime)}</span>
-                                <span>·</span>
-                                <span>{formatCurrency(h.total_price)}</span>
-                              </div>
-                              {renderStatusBadge(
-                                h.status_display,
-                                HIRE_STATUS_COLORS[h.status] ?? 'gray',
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </section>
-                  </div>
-                </article>
+                  </article>
+                </li>
               )
             })}
-          </div>
+          </ul>
         )}
       </>
     )
@@ -288,16 +296,17 @@ export default defineComponent({
       <>
         <div class="dashboard-toolbar">
           <button
+            type="button"
             class="btn btn--primary"
             onClick={() => router.push('/dashboard/venues/new')}
           >
-            + Зарегистрировать площадку
+            <span aria-hidden="true">+</span> Зарегистрировать площадку
           </button>
         </div>
 
-        <section class="dashboard-section">
+        <section class="dashboard-section" aria-labelledby="owner-venues-title">
           <div class="section-header">
-            <h2 class="section-title">Мои площадки</h2>
+            <h2 id="owner-venues-title" class="section-title">Мои площадки</h2>
           </div>
 
           {myVenues.value.length === 0 ? (
@@ -311,42 +320,48 @@ export default defineComponent({
               },
             )
           ) : (
-            <div class="venue-grid">
-              {myVenues.value.map((venue) => (
-                <article
-                  class="venue-card"
-                  onClick={() => router.push(`/venues/${venue.id}`)}
-                >
-                  <header class="venue-card-header">
-                    <h3 class="venue-card-title">{venue.name}</h3>
-                    {renderStatusBadge(
-                      VENUE_STATUS[venue.status] ?? venue.status,
-                      VENUE_STATUS_COLORS[venue.status] ?? 'gray',
-                    )}
-                  </header>
-                  <div class="venue-card-meta">
-                    <div>{venue.city}, {venue.address}</div>
-                    <div>
-                      Вместимость: {venue.capacity_min}–{venue.capacity_max} чел.
-                    </div>
-                  </div>
-                  <div class="venue-card-prices">
-                    {venue.price_per_hour && (
-                      <span>{formatCurrency(Number(venue.price_per_hour))} / час</span>
-                    )}
-                    {venue.price_per_day && (
-                      <span>{formatCurrency(Number(venue.price_per_day))} / сутки</span>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
+            <ul class="venue-grid" aria-label="Список ваших площадок">
+              {myVenues.value.map((venue) => {
+                const titleId = `venue-${venue.id}-title`
+                return (
+                  <li>
+                    <article class="venue-card" aria-labelledby={titleId}>
+                      <header class="venue-card-header">
+                        <h3 id={titleId} class="venue-card-title">
+                          <a class="venue-card-link" href={`/venues/${venue.id}`}>
+                            {venue.name}
+                          </a>
+                        </h3>
+                        {renderStatusBadge(
+                          VENUE_STATUS[venue.status] ?? venue.status,
+                          VENUE_STATUS_COLORS[venue.status] ?? 'gray',
+                        )}
+                      </header>
+                      <div class="venue-card-meta">
+                        <div>{venue.city}, {venue.address}</div>
+                        <div>
+                          Вместимость: {venue.capacity_min}–{venue.capacity_max} чел.
+                        </div>
+                      </div>
+                      <div class="venue-card-prices">
+                        {venue.price_per_hour && (
+                          <span>{formatCurrency(Number(venue.price_per_hour))} / час</span>
+                        )}
+                        {venue.price_per_day && (
+                          <span>{formatCurrency(Number(venue.price_per_day))} / сутки</span>
+                        )}
+                      </div>
+                    </article>
+                  </li>
+                )
+              })}
+            </ul>
           )}
         </section>
 
-        <section class="dashboard-section">
+        <section class="dashboard-section" aria-labelledby="owner-bookings-title">
           <div class="section-header">
-            <h2 class="section-title">Аренды моих площадок</h2>
+            <h2 id="owner-bookings-title" class="section-title">Аренды моих площадок</h2>
           </div>
 
           {venueBookings.value.length === 0 ? (
@@ -356,13 +371,14 @@ export default defineComponent({
           ) : (
             <div class="table-wrapper">
               <table class="data-table">
+                <caption class="sr-only">Аренды ваших площадок</caption>
                 <thead>
                   <tr>
-                    <th>Площадка</th>
-                    <th>Мероприятие</th>
-                    <th>Период</th>
-                    <th>Сумма</th>
-                    <th>Статус</th>
+                    <th scope="col">Площадка</th>
+                    <th scope="col">Мероприятие</th>
+                    <th scope="col">Период</th>
+                    <th scope="col">Сумма</th>
+                    <th scope="col">Статус</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -398,9 +414,11 @@ export default defineComponent({
 
     // ─── Specialist view ────────────────────────────────────
     const renderSpecialist = () => (
-      <section class="dashboard-section">
+      <section class="dashboard-section" aria-labelledby="specialist-hires-title">
         <div class="section-header">
-          <h2 class="section-title">Мероприятия, на которые меня наняли</h2>
+          <h2 id="specialist-hires-title" class="section-title">
+            Мероприятия, на которые меня наняли
+          </h2>
         </div>
 
         {specialistHires.value.length === 0 ? (
@@ -412,14 +430,15 @@ export default defineComponent({
         ) : (
           <div class="table-wrapper">
             <table class="data-table">
+              <caption class="sr-only">Мероприятия, на которые вас наняли</caption>
               <thead>
                 <tr>
-                  <th>Мероприятие</th>
-                  <th>Дата</th>
-                  <th>Период работы</th>
-                  <th>Часов</th>
-                  <th>Гонорар</th>
-                  <th>Статус</th>
+                  <th scope="col">Мероприятие</th>
+                  <th scope="col">Дата</th>
+                  <th scope="col">Период работы</th>
+                  <th scope="col">Часов</th>
+                  <th scope="col">Гонорар</th>
+                  <th scope="col">Статус</th>
                 </tr>
               </thead>
               <tbody>
@@ -482,23 +501,25 @@ export default defineComponent({
       return (
         <div class="dashboard-page">
           <div class="container">
-            <div class="dashboard-header">
+            <header class="dashboard-header">
               <div>
                 <h1 class="dashboard-title">{header.title}</h1>
                 <p class="dashboard-subtitle">{header.subtitle}</p>
               </div>
-              <div class="role-badge">{userRoleDisplay.value}</div>
-            </div>
+              <div class="role-badge" aria-label={`Ваша роль: ${userRoleDisplay.value}`}>
+                {userRoleDisplay.value}
+              </div>
+            </header>
 
             {loading.value && (
-              <div class="empty-state">
-                <div class="spinner"></div>
+              <div class="empty-state" role="status" aria-live="polite">
+                <div class="spinner" aria-hidden="true"></div>
                 <p>Загрузка данных…</p>
               </div>
             )}
 
             {!loading.value && errorMessage.value && (
-              <div class="empty-state">
+              <div class="empty-state" role="alert">
                 <p>{errorMessage.value}</p>
               </div>
             )}

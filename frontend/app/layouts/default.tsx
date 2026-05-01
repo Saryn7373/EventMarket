@@ -1,9 +1,9 @@
 import { defineComponent, onMounted } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import { useUserStore } from '~/stores/user'
 import { useApi } from '~/composables/useApi'
 import { API_ENDPOINTS } from '~/utils/constants'
 import type { User } from '~/utils/types'
-import { useRouter } from 'vue-router'
 
 export default defineComponent({
   name: 'DefaultLayout',
@@ -11,10 +11,6 @@ export default defineComponent({
     const userStore = useUserStore()
     const $api = useApi()
     const router = useRouter()
-
-    const navigate = (path: string) => {
-      router.push(path)
-    }
 
     const logout = async () => {
       const refresh = $api.getRefreshToken()
@@ -45,46 +41,65 @@ export default defineComponent({
 
     return () => (
       <div class="layout-default">
-        <header class="app-header">
+        <a href="#main-content" class="skip-link">
+          Перейти к основному содержимому
+        </a>
+
+        <header class="app-header" role="banner">
           <div class="container">
-            <nav class="header-nav">
-              <div class="logo" onClick={() => navigate('/')}>
+            <nav class="header-nav" aria-label="Основная навигация">
+              <RouterLink to="/" class="logo" aria-label="EventMarket — на главную">
                 EventMarket
-              </div>
-              <div class="header-links">
-                <div class="nav-link" onClick={() => navigate('/venues')}>
-                  Площадки
-                </div>
+              </RouterLink>
+              <ul class="header-links">
+                <li>
+                  <RouterLink to="/venues" class="nav-link">
+                    Площадки
+                  </RouterLink>
+                </li>
                 {userStore.isAuthenticated ? (
                   <>
-                    <div class="nav-link" onClick={() => navigate('/dashboard')}>
-                      Дашборд
-                    </div>
-                    <div class="nav-link" onClick={() => navigate('/profile')}>
-                      Профиль
-                    </div>
-                    <span class="user-greeting">
+                    <li>
+                      <RouterLink to="/dashboard" class="nav-link">
+                        Дашборд
+                      </RouterLink>
+                    </li>
+                    <li>
+                      <RouterLink to="/profile" class="nav-link">
+                        Профиль
+                      </RouterLink>
+                    </li>
+                    <li class="user-greeting" aria-live="polite">
+                      <span class="sr-only">Вы вошли как </span>
                       {userStore.user?.first_name || userStore.user?.email}
-                    </span>
-                    <button class="btn btn--secondary btn--sm" onClick={logout}>
-                      Выйти
-                    </button>
+                    </li>
+                    <li>
+                      <button
+                        type="button"
+                        class="btn btn--secondary btn--sm"
+                        onClick={logout}
+                      >
+                        Выйти
+                      </button>
+                    </li>
                   </>
                 ) : (
-                  <button class="btn btn--primary btn--sm" onClick={() => navigate('/auth/login')}>
-                    Войти
-                  </button>
+                  <li>
+                    <RouterLink to="/auth/login" class="btn btn--primary btn--sm">
+                      Войти
+                    </RouterLink>
+                  </li>
                 )}
-              </div>
+              </ul>
             </nav>
           </div>
         </header>
 
-        <main class="app-main">
+        <main id="main-content" class="app-main" tabindex="-1">
           {slots.default?.()}
         </main>
 
-        <footer class="app-footer">
+        <footer class="app-footer" role="contentinfo">
           <div class="container">
             <p class="footer-text">
               © {new Date().getFullYear()} EventMarket

@@ -117,20 +117,26 @@ export default defineComponent({
     return () => (
       <div class="dashboard-venues-page">
         <div class="container">
-          <div class="page-header">
+          <header class="page-header">
             <div>
-              <h1 class="page-title">Мои площадки</h1>
+              <h1 id="venues-page-title" class="page-title">Мои площадки</h1>
               <p class="page-subtitle">Управление площадками</p>
             </div>
             <a href="/venues/create" class="btn btn--primary">
-              + Добавить площадку
+              <span aria-hidden="true">+</span> Добавить площадку
             </a>
-          </div>
+          </header>
 
           {/* Фильтры */}
-          <div class="filters-bar">
+          <form
+            class="filters-bar"
+            role="search"
+            aria-label="Фильтры площадок"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <div class="filter-item">
               <UiSelect
+                id="venues-filter-status"
                 label="Статус"
                 modelValue={statusFilter.value}
                 onUpdate:modelValue={(val: any) => {
@@ -143,6 +149,7 @@ export default defineComponent({
 
             <div class="filter-item">
               <UiSelect
+                id="venues-filter-ordering"
                 label="Сортировка"
                 modelValue={ordering.value}
                 onUpdate:modelValue={(val: any) => {
@@ -152,25 +159,25 @@ export default defineComponent({
                 options={orderingOptions.value}
               />
             </div>
-          </div>
+          </form>
 
           {/* Контент */}
           {loading.value ? (
-            <div class="loading-state">
-              <div class="spinner"></div>
-              <p>Загрузка площадкок...</p>
+            <div class="loading-state" role="status" aria-live="polite">
+              <div class="spinner" aria-hidden="true"></div>
+              <p>Загрузка площадок...</p>
             </div>
           ) : error.value ? (
-            <div class="error-state">
+            <div class="error-state" role="alert">
               <p class="error-text">{error.value}</p>
-              <button class="btn btn--primary" onClick={loadVenues}>
+              <button type="button" class="btn btn--primary" onClick={loadVenues}>
                 Повторить
               </button>
             </div>
           ) : venues.value.length === 0 ? (
             <div class="empty-state">
-              <div class="empty-icon">🏛️</div>
-              <h3>Нет площадкок</h3>
+              <div class="empty-icon" aria-hidden="true">🏛️</div>
+              <h2>Нет площадок</h2>
               <p>Добавьте свою первую площадку</p>
               <a href="/venues/create" class="btn btn--primary">
                 Добавить площадку
@@ -178,107 +185,132 @@ export default defineComponent({
             </div>
           ) : (
             <>
-              <div class="results-info">
-                Найдено: {totalCount.value} площадкок
+              <div class="results-info" aria-live="polite">
+                Найдено: {totalCount.value} площадок
               </div>
 
-              <div class="venues-grid">
-                {venues.value.map((venue) => (
-                  <div class="venue-card card">
-                    {venue.main_photo ? (
-                      <div class="venue-photo">
-                        <img src={venue.main_photo} alt={venue.name} />
-                      </div>
-                    ) : (
-                      <div class="venue-photo venue-photo--placeholder">
-                        <div class="photo-placeholder-icon">🏛️</div>
-                      </div>
-                    )}
+              <ul class="venues-grid" aria-labelledby="venues-page-title">
+                {venues.value.map((venue) => {
+                  const cardTitleId = `venue-mng-${venue.id}-title`
+                  return (
+                    <li>
+                      <article class="venue-card card" aria-labelledby={cardTitleId}>
+                        {venue.main_photo ? (
+                          <div class="venue-photo">
+                            <img
+                              src={venue.main_photo}
+                              alt={`Фотография площадки «${venue.name}»`}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            class="venue-photo venue-photo--placeholder"
+                            role="img"
+                            aria-label="Фото площадки отсутствует"
+                          >
+                            <div class="photo-placeholder-icon" aria-hidden="true">🏛️</div>
+                          </div>
+                        )}
 
-                    <div class="venue-info">
-                      <div class="venue-header">
-                        <h3 class="venue-title">{venue.name}</h3>
-                        <span
-                          class="status-badge"
-                          style={{ backgroundColor: getStatusColor(venue.status) }}
-                        >
-                          {getStatusLabel(venue.status)}
-                        </span>
-                      </div>
+                        <div class="venue-info">
+                          <div class="venue-header">
+                            <h3 id={cardTitleId} class="venue-title">{venue.name}</h3>
+                            <span
+                              class="status-badge"
+                              style={{ backgroundColor: getStatusColor(venue.status) }}
+                            >
+                              <span class="sr-only">Статус: </span>
+                              {getStatusLabel(venue.status)}
+                            </span>
+                          </div>
 
-                      <div class="venue-details">
-                        <div class="venue-detail">
-                          <span class="detail-label">Город:</span>
-                          <span class="detail-value">{venue.city}</span>
-                        </div>
-                        <div class="venue-detail">
-                          <span class="detail-label">Адрес:</span>
-                          <span class="detail-value">{venue.address}</span>
-                        </div>
-                        <div class="venue-detail">
-                          <span class="detail-label">Вместимость:</span>
-                          <span class="detail-value">
-                            {venue.capacity_min && venue.capacity_max
-                              ? `${venue.capacity_min}–${venue.capacity_max} чел.`
-                              : formatNumber(venue.capacity_max) + ' чел.'}
-                          </span>
-                        </div>
-                        <div class="venue-detail">
-                          <span class="detail-label">Цена за час:</span>
-                          <span class="detail-value">
-                            {formatCurrency(venue.price_per_hour)}
-                          </span>
-                        </div>
-                        <div class="venue-detail">
-                          <span class="detail-label">Цена за день:</span>
-                          <span class="detail-value">
-                            {formatCurrency(venue.price_per_day)}
-                          </span>
-                        </div>
-                      </div>
+                          <dl class="venue-details">
+                            <div class="venue-detail">
+                              <dt class="detail-label">Город:</dt>
+                              <dd class="detail-value">{venue.city}</dd>
+                            </div>
+                            <div class="venue-detail">
+                              <dt class="detail-label">Адрес:</dt>
+                              <dd class="detail-value">{venue.address}</dd>
+                            </div>
+                            <div class="venue-detail">
+                              <dt class="detail-label">Вместимость:</dt>
+                              <dd class="detail-value">
+                                {venue.capacity_min && venue.capacity_max
+                                  ? `${venue.capacity_min}–${venue.capacity_max} чел.`
+                                  : formatNumber(venue.capacity_max) + ' чел.'}
+                              </dd>
+                            </div>
+                            <div class="venue-detail">
+                              <dt class="detail-label">Цена за час:</dt>
+                              <dd class="detail-value">
+                                {formatCurrency(venue.price_per_hour)}
+                              </dd>
+                            </div>
+                            <div class="venue-detail">
+                              <dt class="detail-label">Цена за день:</dt>
+                              <dd class="detail-value">
+                                {formatCurrency(venue.price_per_day)}
+                              </dd>
+                            </div>
+                          </dl>
 
-                      {venue.is_verified && (
-                        <div class="venue-verified">
-                          ✓ Верифицирована
+                          {venue.is_verified && (
+                            <div class="venue-verified">
+                              <span aria-hidden="true">✓</span> Верифицирована
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
 
-                    <div class="venue-footer">
-                      <div class="venue-actions">
-                        <a href={`/dashboard/venues/${venue.id}`} class="btn btn--sm btn--outline">
-                          Подробнее
-                        </a>
-                        <a href={`/venues/${venue.slug}`} class="btn btn--sm btn--primary">
-                          Просмотр
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        <div class="venue-footer">
+                          <div class="venue-actions">
+                            <a
+                              href={`/dashboard/venues/${venue.id}`}
+                              class="btn btn--sm btn--outline"
+                              aria-label={`Управление площадкой «${venue.name}»`}
+                            >
+                              Подробнее
+                            </a>
+                            <a
+                              href={`/venues/${venue.slug}`}
+                              class="btn btn--sm btn--primary"
+                              aria-label={`Открыть страницу площадки «${venue.name}»`}
+                            >
+                              Просмотр
+                            </a>
+                          </div>
+                        </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
 
               {/* Пагинация */}
               {totalPages.value > 1 && (
-                <div class="pagination">
+                <nav class="pagination" aria-label="Пагинация площадок">
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === 1}
                     onClick={() => handlePageChange(currentPage.value - 1)}
+                    aria-label="Предыдущая страница"
                   >
-                    ← Назад
+                    <span aria-hidden="true">←</span> Назад
                   </button>
-                  <span class="pagination-info">
+                  <span class="pagination-info" aria-current="page">
                     Страница {currentPage.value} из {totalPages.value}
                   </span>
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === totalPages.value}
                     onClick={() => handlePageChange(currentPage.value + 1)}
+                    aria-label="Следующая страница"
                   >
-                    Вперед →
+                    Вперед <span aria-hidden="true">→</span>
                   </button>
-                </div>
+                </nav>
               )}
             </>
           )}

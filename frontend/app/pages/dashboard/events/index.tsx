@@ -132,20 +132,26 @@ export default defineComponent({
     return () => (
       <div class="dashboard-events-page">
         <div class="container">
-          <div class="page-header">
+          <header class="page-header">
             <div>
-              <h1 class="page-title">Мои мероприятия</h1>
+              <h1 id="events-page-title" class="page-title">Мои мероприятия</h1>
               <p class="page-subtitle">Управление мероприятиями</p>
             </div>
             <a href="/events/create" class="btn btn--primary">
-              + Создать мероприятие
+              <span aria-hidden="true">+</span> Создать мероприятие
             </a>
-          </div>
+          </header>
 
           {/* Фильтры */}
-          <div class="filters-bar">
+          <form
+            class="filters-bar"
+            role="search"
+            aria-label="Фильтры мероприятий"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <div class="filter-item">
               <UiSelect
+                id="events-filter-status"
                 label="Статус"
                 modelValue={statusFilter.value}
                 onUpdate:modelValue={(val: any) => {
@@ -158,6 +164,7 @@ export default defineComponent({
 
             <div class="filter-item">
               <UiSelect
+                id="events-filter-theme"
                 label="Тематика"
                 modelValue={themeFilter.value}
                 onUpdate:modelValue={(val: any) => {
@@ -170,6 +177,7 @@ export default defineComponent({
 
             <div class="filter-item">
               <UiSelect
+                id="events-filter-ordering"
                 label="Сортировка"
                 modelValue={ordering.value}
                 onUpdate:modelValue={(val: any) => {
@@ -179,25 +187,25 @@ export default defineComponent({
                 options={orderingOptions.value}
               />
             </div>
-          </div>
+          </form>
 
           {/* Контент */}
           {loading.value ? (
-            <div class="loading-state">
-              <div class="spinner"></div>
+            <div class="loading-state" role="status" aria-live="polite">
+              <div class="spinner" aria-hidden="true"></div>
               <p>Загрузка мероприятий...</p>
             </div>
           ) : error.value ? (
-            <div class="error-state">
+            <div class="error-state" role="alert">
               <p class="error-text">{error.value}</p>
-              <button class="btn btn--primary" onClick={loadEvents}>
+              <button type="button" class="btn btn--primary" onClick={loadEvents}>
                 Повторить
               </button>
             </div>
           ) : events.value.length === 0 ? (
             <div class="empty-state">
-              <div class="empty-icon">🎉</div>
-              <h3>Нет мероприятий</h3>
+              <div class="empty-icon" aria-hidden="true">🎉</div>
+              <h2>Нет мероприятий</h2>
               <p>Создайте первое мероприятие</p>
               <a href="/events/create" class="btn btn--primary">
                 Создать мероприятие
@@ -205,97 +213,113 @@ export default defineComponent({
             </div>
           ) : (
             <>
-              <div class="results-info">
+              <div class="results-info" aria-live="polite">
                 Найдено: {totalCount.value} мероприятий
               </div>
 
-              <div class="events-grid">
-                {events.value.map((event) => (
-                  <div class="event-card card">
-                    <div class="event-header">
-                      <div class="event-theme-icon">
-                        {EVENT_THEME_ICONS[event.theme] || '📌'}
-                      </div>
-                      <span
-                        class="status-badge"
-                        style={{ backgroundColor: getStatusColor(event.status) }}
-                      >
-                        {getStatusLabel(event.status)}
-                      </span>
-                    </div>
-
-                    <h3 class="event-title">{event.title}</h3>
-
-                    <div class="event-body">
-                      <div class="event-detail">
-                        <span class="detail-label">Дата:</span>
-                        <span class="detail-value">{formatDate(event.date)}</span>
-                      </div>
-                      {event.start_time && (
-                        <div class="event-detail">
-                          <span class="detail-label">Время:</span>
-                          <span class="detail-value">
-                            {event.start_time} — {event.end_time}
+              <ul class="events-grid" aria-labelledby="events-page-title">
+                {events.value.map((event) => {
+                  const cardTitleId = `event-card-${event.id}-title`
+                  return (
+                    <li>
+                      <article class="event-card card" aria-labelledby={cardTitleId}>
+                        <div class="event-header">
+                          <div class="event-theme-icon" aria-hidden="true">
+                            {EVENT_THEME_ICONS[event.theme] || '📌'}
+                          </div>
+                          <span
+                            class="status-badge"
+                            style={{ backgroundColor: getStatusColor(event.status) }}
+                          >
+                            <span class="sr-only">Статус: </span>
+                            {getStatusLabel(event.status)}
                           </span>
                         </div>
-                      )}
-                      <div class="event-detail">
-                        <span class="detail-label">Тематика:</span>
-                        <span class="detail-value">{event.theme_display}</span>
-                      </div>
-                      <div class="event-detail">
-                        <span class="detail-label">Гостей:</span>
-                        <span class="detail-value">{event.expected_guests}</span>
-                      </div>
-                      {event.duration_hours && (
-                        <div class="event-detail">
-                          <span class="detail-label">Длительность:</span>
-                          <span class="detail-value">{event.duration_hours} ч</span>
+
+                        <h3 id={cardTitleId} class="event-title">{event.title}</h3>
+
+                        <dl class="event-body">
+                          <div class="event-detail">
+                            <dt class="detail-label">Дата:</dt>
+                            <dd class="detail-value">{formatDate(event.date)}</dd>
+                          </div>
+                          {event.start_time && (
+                            <div class="event-detail">
+                              <dt class="detail-label">Время:</dt>
+                              <dd class="detail-value">
+                                {event.start_time} — {event.end_time}
+                              </dd>
+                            </div>
+                          )}
+                          <div class="event-detail">
+                            <dt class="detail-label">Тематика:</dt>
+                            <dd class="detail-value">{event.theme_display}</dd>
+                          </div>
+                          <div class="event-detail">
+                            <dt class="detail-label">Гостей:</dt>
+                            <dd class="detail-value">{event.expected_guests}</dd>
+                          </div>
+                          {event.duration_hours && (
+                            <div class="event-detail">
+                              <dt class="detail-label">Длительность:</dt>
+                              <dd class="detail-value">{event.duration_hours} ч</dd>
+                            </div>
+                          )}
+                        </dl>
+
+                        {event.venues && event.venues.length > 0 && (
+                          <div class="event-venues">
+                            <div class="venues-label" id={`event-${event.id}-venues`}>Площадки:</div>
+                            <ul aria-labelledby={`event-${event.id}-venues`}>
+                              {event.venues.map((venue) => (
+                                <li class="venue-item">{venue.name}, {venue.city}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        <div class="event-footer">
+                          <div class="event-actions">
+                            <a
+                              href={`/dashboard/events/${event.id}`}
+                              class="btn btn--sm btn--outline"
+                              aria-label={`Подробнее о мероприятии ${event.title}`}
+                            >
+                              Подробнее
+                            </a>
+                          </div>
                         </div>
-                      )}
-                    </div>
-
-                    {event.venues && event.venues.length > 0 && (
-                      <div class="event-venues">
-                        <div class="venues-label">Площадки:</div>
-                        {event.venues.map((venue) => (
-                          <div class="venue-item">{venue.name}, {venue.city}</div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div class="event-footer">
-                      <div class="event-actions">
-                        <a href={`/dashboard/events/${event.id}`} class="btn btn--sm btn--outline">
-                          Подробнее
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
 
               {/* Пагинация */}
               {totalPages.value > 1 && (
-                <div class="pagination">
+                <nav class="pagination" aria-label="Пагинация мероприятий">
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === 1}
                     onClick={() => handlePageChange(currentPage.value - 1)}
+                    aria-label="Предыдущая страница"
                   >
-                    ← Назад
+                    <span aria-hidden="true">←</span> Назад
                   </button>
-                  <span class="pagination-info">
+                  <span class="pagination-info" aria-current="page">
                     Страница {currentPage.value} из {totalPages.value}
                   </span>
                   <button
+                    type="button"
                     class="btn btn--sm btn--outline"
                     disabled={currentPage.value === totalPages.value}
                     onClick={() => handlePageChange(currentPage.value + 1)}
+                    aria-label="Следующая страница"
                   >
-                    Вперед →
+                    Вперед <span aria-hidden="true">→</span>
                   </button>
-                </div>
+                </nav>
               )}
             </>
           )}

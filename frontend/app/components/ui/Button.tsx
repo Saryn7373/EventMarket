@@ -2,6 +2,7 @@ import { defineComponent, type PropType, computed } from 'vue'
 
 export default defineComponent({
   name: 'UiButton',
+  inheritAttrs: false,
   props: {
     variant: {
       type: String as PropType<'primary' | 'secondary' | 'danger' | 'ghost'>,
@@ -23,6 +24,14 @@ export default defineComponent({
       type: String as PropType<'button' | 'submit' | 'reset'>,
       default: 'button',
     },
+    /**
+     * Доступное название для кнопок без видимого текста (например, иконочных).
+     * Если указан — рендерится в .sr-only внутри кнопки.
+     */
+    srLabel: {
+      type: String,
+      default: '',
+    },
   },
   setup(props, { slots, attrs }) {
     const classes = computed(() => [
@@ -37,9 +46,20 @@ export default defineComponent({
         class={classes.value}
         disabled={props.disabled || props.loading}
         type={props.type}
+        aria-busy={props.loading ? 'true' : undefined}
         {...attrs}
       >
-        {props.loading ? <span class="spinner" /> : slots.default?.()}
+        {props.loading ? (
+          <>
+            <span class="spinner" aria-hidden="true" />
+            <span class="sr-only">Загрузка</span>
+          </>
+        ) : (
+          <>
+            {slots.default?.()}
+            {props.srLabel && <span class="sr-only">{props.srLabel}</span>}
+          </>
+        )}
       </button>
     )
   },

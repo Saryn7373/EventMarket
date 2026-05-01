@@ -150,10 +150,10 @@ export default defineComponent({
     return () => (
       <div class="profile-page">
         <div class="container">
-          <div class="profile-header">
+          <header class="profile-header">
             <h1 class="profile-title">Профиль</h1>
             <p class="profile-subtitle">Управление личными данными</p>
-          </div>
+          </header>
 
           {/* Сообщения */}
           {successMessage.value && (
@@ -165,9 +165,9 @@ export default defineComponent({
 
           <div class="profile-content">
             {/* Основная информация */}
-            <div class="profile-section card">
+            <section class="profile-section card" aria-labelledby="profile-personal-title">
               <div class="section-header">
-                <h2 class="section-title">Личная информация</h2>
+                <h2 id="profile-personal-title" class="section-title">Личная информация</h2>
                 {!isEditing.value && (
                   <UiButton onClick={enableEditing} variant="ghost" size="sm">
                     Редактировать
@@ -176,100 +176,109 @@ export default defineComponent({
               </div>
 
               <div class="profile-avatar">
-                <div class="avatar-circle">
+                <div class="avatar-circle" aria-hidden="true">
                   {getInitials()}
                 </div>
+                <span class="sr-only">
+                  Аватар пользователя {userStore.user?.first_name || ''} {userStore.user?.last_name || ''}
+                </span>
               </div>
 
-              <div class="profile-info">
+              <dl class="profile-info">
                 <div class="info-row">
-                  <label class="info-label">Email</label>
-                  <div class="info-value">{userEmail.value}</div>
+                  <dt class="info-label">Email</dt>
+                  <dd class="info-value">{userEmail.value}</dd>
                 </div>
 
                 <div class="info-row">
-                  <label class="info-label">Роль</label>
-                  <div class="info-value">
+                  <dt class="info-label">Роль</dt>
+                  <dd class="info-value">
                     <span class="role-badge">{userRoleDisplay.value}</span>
-                  </div>
+                  </dd>
                 </div>
 
                 <div class="info-row">
-                  <label class="info-label">Дата регистрации</label>
-                  <div class="info-value">{dateJoined.value}</div>
+                  <dt class="info-label">Дата регистрации</dt>
+                  <dd class="info-value">{dateJoined.value}</dd>
                 </div>
 
-                <div class="info-divider"></div>
-
-                {isEditing.value ? (
-                  <>
-                    <div class="info-row info-row--edit">
-                      <UiInput
-                        label="Имя"
-                        modelValue={firstName.value}
-                        onUpdate:modelValue={(val: string) => {
-                          firstName.value = val
-                          clearMessages()
-                        }}
-                        placeholder="Ваше имя"
-                        error={validationErrors.value?.first_name?.[0]}
-                      />
-                    </div>
-
-                    <div class="info-row info-row--edit">
-                      <UiInput
-                        label="Фамилия"
-                        modelValue={lastName.value}
-                        onUpdate:modelValue={(val: string) => {
-                          lastName.value = val
-                          clearMessages()
-                        }}
-                        placeholder="Ваша фамилия"
-                        error={validationErrors.value?.last_name?.[0]}
-                      />
-                    </div>
-
-                    <div class="info-actions">
-                      <button
-                        class="btn btn--primary"
-                        onClick={saveProfile}
-                        disabled={saving.value}
-                      >
-                        {saving.value ? 'Сохранение...' : 'Сохранить'}
-                      </button>
-                      <button
-                        class="btn btn--ghost"
-                        onClick={cancelEditing}
-                        disabled={saving.value}
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </>
-                ) : (
+                {!isEditing.value && (
                   <>
                     <div class="info-row">
-                      <label class="info-label">Имя</label>
-                      <div class="info-value">
+                      <dt class="info-label">Имя</dt>
+                      <dd class="info-value">
                         {userStore.user?.first_name || 'Не указано'}
-                      </div>
+                      </dd>
                     </div>
 
                     <div class="info-row">
-                      <label class="info-label">Фамилия</label>
-                      <div class="info-value">
+                      <dt class="info-label">Фамилия</dt>
+                      <dd class="info-value">
                         {userStore.user?.last_name || 'Не указано'}
-                      </div>
+                      </dd>
                     </div>
                   </>
                 )}
-              </div>
-            </div>
+              </dl>
+
+              {isEditing.value && (
+                <form
+                  class="profile-edit-form"
+                  aria-label="Редактирование личных данных"
+                  onSubmit={(e) => { e.preventDefault(); saveProfile() }}
+                >
+                  <UiInput
+                    id="profile-first-name"
+                    label="Имя"
+                    modelValue={firstName.value}
+                    onUpdate:modelValue={(val: string) => {
+                      firstName.value = val
+                      clearMessages()
+                    }}
+                    placeholder="Ваше имя"
+                    autocomplete="given-name"
+                    error={validationErrors.value?.first_name?.[0]}
+                  />
+
+                  <UiInput
+                    id="profile-last-name"
+                    label="Фамилия"
+                    modelValue={lastName.value}
+                    onUpdate:modelValue={(val: string) => {
+                      lastName.value = val
+                      clearMessages()
+                    }}
+                    placeholder="Ваша фамилия"
+                    autocomplete="family-name"
+                    error={validationErrors.value?.last_name?.[0]}
+                  />
+
+                  <div class="info-actions">
+                    <button
+                      type="submit"
+                      class="btn btn--primary"
+                      disabled={saving.value}
+                      aria-busy={saving.value ? 'true' : undefined}
+                    >
+                      {saving.value ? 'Сохранение...' : 'Сохранить'}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn--ghost"
+                      onClick={cancelEditing}
+                      disabled={saving.value}
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </form>
+              )}
+            </section>
 
             {/* Смена пароля */}
-            <div class="profile-section card">
+            <section class="profile-section card" aria-labelledby="profile-security-title">
               <div class="section-header">
-                <h2 class="section-title">Безопасность</h2>
+                <h2 id="profile-security-title" class="section-title">Безопасность</h2>
                 {!showPasswordForm.value && (
                   <UiButton onClick={togglePasswordForm} variant="ghost" size="sm">
                     Изменить пароль
@@ -278,62 +287,71 @@ export default defineComponent({
               </div>
 
               {showPasswordForm.value ? (
-                <div class="password-form">
-                  <div class="form-group">
-                    <UiInput
-                      label="Текущий пароль"
-                      type="password"
-                      modelValue={oldPassword.value}
-                      onUpdate:modelValue={(val: string) => {
-                        oldPassword.value = val
-                        clearMessages()
-                      }}
-                      placeholder="Введите текущий пароль"
-                      error={validationErrors.value?.old_password?.[0]}
-                    />
-                  </div>
+                <form
+                  class="password-form"
+                  aria-label="Смена пароля"
+                  onSubmit={(e) => { e.preventDefault(); changePassword() }}
+                >
+                  <UiInput
+                    id="profile-old-password"
+                    label="Текущий пароль"
+                    type="password"
+                    modelValue={oldPassword.value}
+                    onUpdate:modelValue={(val: string) => {
+                      oldPassword.value = val
+                      clearMessages()
+                    }}
+                    placeholder="Введите текущий пароль"
+                    autocomplete="current-password"
+                    error={validationErrors.value?.old_password?.[0]}
+                  />
 
-                  <div class="form-group">
-                    <UiInput
-                      label="Новый пароль"
-                      type="password"
-                      modelValue={newPassword.value}
-                      onUpdate:modelValue={(val: string) => {
-                        newPassword.value = val
-                        clearMessages()
-                      }}
-                      placeholder="Минимум 8 символов"
-                      error={validationErrors.value?.new_password?.[0]}
-                    />
-                  </div>
+                  <UiInput
+                    id="profile-new-password"
+                    label="Новый пароль"
+                    type="password"
+                    modelValue={newPassword.value}
+                    onUpdate:modelValue={(val: string) => {
+                      newPassword.value = val
+                      clearMessages()
+                    }}
+                    placeholder="Минимум 8 символов"
+                    autocomplete="new-password"
+                    hint="Минимум 8 символов"
+                    error={validationErrors.value?.new_password?.[0]}
+                  />
 
-                  <div class="form-group">
-                    <UiInput
-                      label="Подтверждение пароля"
-                      type="password"
-                      modelValue={confirmPassword.value}
-                      onUpdate:modelValue={(val: string) => {
-                        confirmPassword.value = val
-                        clearMessages()
-                      }}
-                      placeholder="Повторите новый пароль"
-                    />
-                    {newPassword.value &&
+                  <UiInput
+                    id="profile-confirm-password"
+                    label="Подтверждение пароля"
+                    type="password"
+                    modelValue={confirmPassword.value}
+                    onUpdate:modelValue={(val: string) => {
+                      confirmPassword.value = val
+                      clearMessages()
+                    }}
+                    placeholder="Повторите новый пароль"
+                    autocomplete="new-password"
+                    error={
+                      newPassword.value &&
                       confirmPassword.value &&
-                      newPassword.value !== confirmPassword.value && (
-                        <div class="field-error">Пароли не совпадают</div>
-                      )}
-                  </div>
+                      newPassword.value !== confirmPassword.value
+                        ? 'Пароли не совпадают'
+                        : ''
+                    }
+                  />
 
                   <div class="form-actions">
                     <button
+                      type="submit"
                       class="btn btn--primary"
-                      onClick={changePassword}
                       disabled={saving.value}
+                      aria-busy={saving.value ? 'true' : undefined}
                     >
                       {saving.value ? 'Сохранение...' : 'Изменить пароль'}
                     </button>
                     <button
+                      type="button"
                       class="btn btn--ghost"
                       onClick={togglePasswordForm}
                       disabled={saving.value}
@@ -341,32 +359,32 @@ export default defineComponent({
                       Отмена
                     </button>
                   </div>
-                </div>
+                </form>
               ) : (
                 <div class="security-info">
                   <p>Регулярно меняйте пароль для безопасности аккаунта</p>
                 </div>
               )}
-            </div>
+            </section>
 
             {/* Статистика аккаунта */}
-            <div class="profile-section card">
-              <h2 class="section-title">Аккаунт</h2>
-              <div class="account-stats">
+            <section class="profile-section card" aria-labelledby="profile-account-title">
+              <h2 id="profile-account-title" class="section-title">Аккаунт</h2>
+              <dl class="account-stats">
                 <div class="stat-row">
-                  <span class="stat-label">User ID:</span>
-                  <span class="stat-value">{userStore.user?.id || '—'}</span>
+                  <dt class="stat-label">User ID:</dt>
+                  <dd class="stat-value">{userStore.user?.id || '—'}</dd>
                 </div>
                 <div class="stat-row">
-                  <span class="stat-label">Роль:</span>
-                  <span class="stat-value">{userRoleDisplay.value}</span>
+                  <dt class="stat-label">Роль:</dt>
+                  <dd class="stat-value">{userRoleDisplay.value}</dd>
                 </div>
                 <div class="stat-row">
-                  <span class="stat-label">Зарегистрирован:</span>
-                  <span class="stat-value">{dateJoined.value}</span>
+                  <dt class="stat-label">Зарегистрирован:</dt>
+                  <dd class="stat-value">{dateJoined.value}</dd>
                 </div>
-              </div>
-            </div>
+              </dl>
+            </section>
           </div>
         </div>
       </div>

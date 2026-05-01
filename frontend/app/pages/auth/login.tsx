@@ -40,8 +40,8 @@ export default defineComponent({
     }
 
     return () => (
-      <div class="login-page">
-        <h1 class="login-title">Вход в аккаунт</h1>
+      <section class="login-page" aria-labelledby="login-title">
+        <h1 id="login-title" class="login-title">Вход в аккаунт</h1>
         <p class="login-subtitle">
           Введите свои данные для входа
         </p>
@@ -54,22 +54,30 @@ export default defineComponent({
           </div>
         )}
 
-        <form class="login-form" onSubmit={(e) => { e.preventDefault(); onSubmit() }}>
+        <form
+          class="login-form"
+          aria-labelledby="login-title"
+          onSubmit={(e) => { e.preventDefault(); onSubmit() }}
+        >
           <UiInput
+            id="login-email"
             modelValue={email.value}
             onUpdate:modelValue={(val: string) => { email.value = val }}
             type="email"
             label="Email"
             placeholder="your@email.com"
+            autocomplete="email"
             required
           />
 
           <UiInput
+            id="login-password"
             modelValue={password.value}
             onUpdate:modelValue={(val: string) => { password.value = val }}
             type="password"
             label="Пароль"
             placeholder="Введите пароль"
+            autocomplete="current-password"
             required
           />
 
@@ -92,7 +100,7 @@ export default defineComponent({
             <a href="/auth/register">Зарегистрироваться</a>
           </p>
         </div>
-      </div>
+      </section>
     )
   },
 })

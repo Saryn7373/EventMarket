@@ -11,7 +11,7 @@
   margin-bottom: var(--spacing-sm);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--color-gray-700);
+  color: var(--color-gray-800);
 }
 
 .input-required {
@@ -67,6 +67,18 @@
 
 .input-error {
   margin-top: var(--spacing-xs);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--color-danger);
+}
+
+.input-hint {
+  margin-top: var(--spacing-xs);
+  font-size: 0.8125rem;
+  color: var(--color-gray-700);
+}
+
+.input:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--color-primary);
 }

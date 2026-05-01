@@ -15,7 +15,7 @@
 }
 
 .login-subtitle {
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
   margin-bottom: var(--spacing-xl);
   text-align: center;
 }
@@ -36,5 +36,9 @@
   margin-top: var(--spacing-lg);
   text-align: center;
   font-size: 0.875rem;
-  color: var(--color-gray-600);
+  color: var(--color-gray-700);
+}
+
+.login-footer p {
+  margin: 0;
 }
