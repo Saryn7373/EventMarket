@@ -1,0 +1,148 @@
+/* ============================================
+   UiDialog — нативный <dialog> элемент
+   ============================================ */
+
+.ui-dialog {
+  /* Сброс браузерных стилей */
+  border: none;
+  padding: 0;
+  background: transparent;
+  outline: none;
+
+  /* Размер и позиционирование */
+  width: calc(100% - var(--spacing-xl) * 2);
+  max-width: 40rem;
+  max-height: calc(100dvh - var(--spacing-2xl) * 2);
+  margin: auto;
+  border-radius: var(--radius-xl);
+  overflow: visible;
+}
+
+.ui-dialog--sm { max-width: 28rem; }
+.ui-dialog--md { max-width: 40rem; }
+.ui-dialog--lg { max-width: 54rem; }
+
+/* Полупрозрачный фон за диалогом */
+.ui-dialog::backdrop {
+  background-color: rgba(17, 24, 39, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+/* Анимация появления */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(-1.25rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ui-dialog[open] .ui-dialog__inner {
+  animation: dialog-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Внутренний контейнер (принимает клики, не закрывает) */
+.ui-dialog__inner {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--spacing-2xl) * 2);
+  background-color: var(--color-white);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+/* ── Шапка ── */
+.ui-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-bottom: 1px solid var(--color-gray-200);
+  flex-shrink: 0;
+}
+
+.ui-dialog__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.ui-dialog__close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-gray-500);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.ui-dialog__close-btn:hover {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.ui-dialog__close-btn:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Тело (скроллируется) ── */
+.ui-dialog__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+  overscroll-behavior: contain;
+}
+
+/* ── Нижняя панель кнопок ── */
+.ui-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-top: 1px solid var(--color-gray-200);
+  background-color: var(--color-gray-50);
+  flex-shrink: 0;
+}
+
+/* ── Адаптив ── */
+@media (max-width: 40rem) {
+  .ui-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    margin: auto auto 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .ui-dialog__inner {
+    max-height: 92dvh;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+
+  .ui-dialog__header {
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .ui-dialog__body {
+    padding: var(--spacing-lg);
+  }
+
+  .ui-dialog__footer {
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+}

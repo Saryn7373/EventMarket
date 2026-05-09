@@ -1,0 +1,525 @@
+/* ============================================
+   Event Detail Page
+   ============================================ */
+
+.ep-loading,
+.ep-error {
+  padding: var(--spacing-2xl) 0;
+}
+
+.ep-loading .container,
+.ep-error .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  text-align: center;
+}
+
+.ep-error__text {
+  font-size: 1.125rem;
+  color: var(--color-gray-700);
+  margin: 0;
+}
+
+/* ── Хлебные крошки ── */
+.ep-breadcrumb {
+  font-size: 0.875rem;
+  color: var(--color-gray-500);
+  margin-bottom: var(--spacing-xl);
+}
+
+.ep-breadcrumb a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.ep-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+/* ── Шапка ── */
+.ep-header {
+  margin-bottom: var(--spacing-2xl);
+  padding-bottom: var(--spacing-xl);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.ep-header__top {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.ep-theme-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.ep-title {
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.ep-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Группа кнопок действий в шапке */
+.ep-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Текст подтверждения отмены */
+.ep-cancel-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.ep-cancel-confirm__text {
+  font-size: 1rem;
+  color: var(--color-gray-800);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Метаданные ── */
+.ep-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xl);
+  margin: 0 0 var(--spacing-lg);
+}
+
+.ep-meta__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ep-meta__item dt {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ep-meta__item dd {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+/* Мини-бейджи "Сегодня" / "Предстоит" */
+.ep-badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ep-badge--today {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.ep-badge--upcoming {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Краткое описание */
+.ep-short-desc {
+  font-size: 1.0625rem;
+  color: var(--color-gray-700);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Тело страницы ── */
+.ep-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-xl);
+  margin-bottom: var(--spacing-2xl);
+}
+
+/* ── Секция ── */
+.ep-section {
+  background-color: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-xl);
+}
+
+.ep-section--description {
+  margin-bottom: var(--spacing-xl);
+}
+
+.ep-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.ep-section__title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.ep-section__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.375rem;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-full);
+}
+
+/* ── Список карточек ── */
+.ep-cards {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+/* ── Карточка площадки ── */
+.ep-venue-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ep-venue-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.ep-venue-card:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-venue-card__icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.ep-venue-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ep-venue-card__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ep-venue-card__location {
+  font-size: 0.8125rem;
+  color: var(--color-gray-600);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ep-venue-card__arrow {
+  color: var(--color-gray-400);
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ep-venue-card:hover .ep-venue-card__arrow {
+  color: var(--color-primary);
+  transform: translateX(3px);
+}
+
+/* ── Карточка специалиста ── */
+.ep-specialist-card {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.ep-specialist-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.ep-specialist-card:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ep-specialist-card__avatar {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.ep-specialist-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ep-specialist-card__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ep-specialist-card__specialty {
+  font-size: 0.8125rem;
+  color: var(--color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ep-specialist-card__arrow {
+  color: var(--color-gray-400);
+  font-size: 1rem;
+  flex-shrink: 0;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.ep-specialist-card:hover .ep-specialist-card__arrow {
+  color: var(--color-primary);
+  transform: translateX(3px);
+}
+
+/* ── Пустые состояния ── */
+.ep-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl) var(--spacing-lg);
+  text-align: center;
+}
+
+.ep-empty--inline {
+  padding: var(--spacing-lg);
+}
+
+.ep-empty__icon {
+  font-size: 2.5rem;
+  opacity: 0.5;
+}
+
+.ep-empty__text {
+  font-size: 0.9375rem;
+  color: var(--color-gray-600);
+  margin: 0;
+}
+
+/* ── Описание ── */
+.ep-description {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--color-gray-800);
+}
+
+.ep-description p {
+  margin-bottom: var(--spacing-md);
+}
+
+.ep-description p:last-child {
+  margin-bottom: 0;
+}
+
+/* ── Футер ── */
+.ep-footer {
+  padding-top: var(--spacing-xl);
+  border-top: 1px solid var(--color-gray-100);
+}
+
+.ep-footer__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xl);
+  margin: 0;
+}
+
+.ep-footer__meta div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ep-footer__meta dt {
+  font-size: 0.75rem;
+  color: var(--color-gray-500);
+  font-weight: 500;
+}
+
+.ep-footer__meta dd {
+  font-size: 0.875rem;
+  color: var(--color-gray-700);
+  margin: 0;
+}
+
+/* ── Двухколоночная строка формы ── */
+.ecf__row--2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ── Подсказка о заблокированных полях ── */
+.ep-edit-hint {
+  font-size: 0.8125rem;
+  color: var(--color-gray-500);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--color-gray-50);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--color-gray-300);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Адаптив ── */
+@media (max-width: 56rem) {
+  .ep-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 48rem) {
+  .ep-title {
+    font-size: 1.5rem;
+  }
+
+  .ep-meta {
+    gap: var(--spacing-lg);
+  }
+
+  .ep-section {
+    padding: var(--spacing-lg);
+  }
+
+  .ep-section__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+}
+
+@media (max-width: 40rem) {
+  .ep-header__top {
+    gap: var(--spacing-sm);
+  }
+
+  .ep-title {
+    font-size: 1.25rem;
+    width: 100%;
+  }
+
+  .ep-theme-icon {
+    font-size: 1.625rem;
+  }
+
+  .ep-header__actions {
+    width: 100%;
+    margin-left: 0;
+    flex-direction: column;
+  }
+
+  .ep-header__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .ep-meta {
+    gap: var(--spacing-md);
+  }
+
+  .ep-section {
+    padding: var(--spacing-md);
+  }
+
+  .ep-body {
+    gap: var(--spacing-md);
+  }
+
+  .ecf__row--2 {
+    grid-template-columns: 1fr;
+  }
+}

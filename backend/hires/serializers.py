@@ -95,13 +95,23 @@ class HireDetailSerializer(serializers.ModelSerializer):
 
 class HireCreateSerializer(serializers.ModelSerializer):
     """
-    Принимает: specialist, event, start_datetime, end_datetime.
+    Принимает: specialist (user UUID), event, start_datetime, end_datetime.
     total_price рассчитывается на сервере.
     """
+
+    # Принимаем user.id специалиста (то же значение, что возвращает SpecialistDetailSerializer)
+    specialist = serializers.UUIDField()
 
     class Meta:
         model = Hire
         fields = ["specialist", "event", "start_datetime", "end_datetime"]
+
+    def validate_specialist(self, user_id):
+        from users.models import Specialist as SpecialistModel
+        try:
+            return SpecialistModel.objects.get(user_id=user_id)
+        except SpecialistModel.DoesNotExist:
+            raise serializers.ValidationError("Специалист не найден.")
 
     def validate(self, data):
         from .validators import (
@@ -110,19 +120,22 @@ class HireCreateSerializer(serializers.ModelSerializer):
             validate_specialist_availability,
         )
 
-        specialist = data["specialist"]
+        specialist = data["specialist"]  # уже Specialist-объект после validate_specialist
         event = data["event"]
         start_dt = data["start_datetime"]
         end_dt = data["end_datetime"]
 
-        # 1. Базовая проверка дат
         validate_hire_datetimes(start_dt, end_dt)
 
-        # 2. Мероприятие принадлежит арендатору
         renter = self.context["request"].user.renter
         validate_event_belongs_to_renter(event, renter)
 
-        # 3. Специалист доступен в выбранный период
+        # Нельзя нанимать для черновых и отменённых мероприятий
+        if event.status in ("draft", "cancelled"):
+            raise serializers.ValidationError(
+                {"event": "Нельзя нанимать специалистов для черновых или отменённых мероприятий."}
+            )
+
         validate_specialist_availability(specialist, start_dt, end_dt)
 
         return data
@@ -131,21 +144,16 @@ class HireCreateSerializer(serializers.ModelSerializer):
         from django.db import transaction
         from .validators import calculate_hire_price
 
-        renter = self.context["request"].user.renter
         specialist = validated_data["specialist"]
         start_dt = validated_data["start_datetime"]
         end_dt = validated_data["end_datetime"]
 
         with transaction.atomic():
-            # Блокировка от конкурентных запросов
             Hire.objects.select_for_update().filter(
                 specialist=specialist,
                 status__in=("pending", "confirmed"),
             )
-
-            # Расчёт стоимости
             price = calculate_hire_price(specialist, start_dt, end_dt)
-
             return Hire.objects.create(
                 total_price=price,
                 **validated_data,

@@ -20,9 +20,13 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
+from users.views import SpecialistListView, SpecialistDetailView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('users.urls')),
+    path('api/specialists/', SpecialistListView.as_view(), name='specialist-list'),
+    path('api/specialists/<uuid:pk>/', SpecialistDetailView.as_view(), name='specialist-detail'),
     path('api/venues/', include('venues.urls')),
     path('api/events/', include('events.urls')),
     path("api/bookings/",   include("bookings.urls")),

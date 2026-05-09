@@ -45,10 +45,10 @@ export const EVENT_STATUS: Record<EventStatus, string> = {
 
 export const EVENT_STATUS_COLORS: Record<EventStatus, string> = {
   draft: 'gray',
-  planned: 'blue',
-  active: 'cyan',
+  planned: 'yellow',
+  active: 'blue',
   ongoing: 'green',
-  completed: 'slate',
+  completed: 'green',
   cancelled: 'red',
 }
 
@@ -155,6 +155,7 @@ export const API_ENDPOINTS = {
     list: '/venues/',
     my: '/venues/my/',
     detail: (id: string) => `/venues/${id}/`,
+    bySlug: (slug: string) => `/venues/slug/${slug}/`,
     images: (id: string) => `/venues/${id}/images/`,
     deleteImage: (id: string, imageId: number) => `/venues/${id}/images/${imageId}/`,
     availability: (id: string) => `/venues/${id}/availability/`,
@@ -181,6 +182,11 @@ export const API_ENDPOINTS = {
     detail: (id: string) => `/hires/${id}/`,
     status: (id: string) => `/hires/${id}/status/`,
     specialistAvailability: (id: string) => `/hires/specialist/${id}/availability/`,
+  },
+  // Specialists
+  specialists: {
+    list: '/specialists/',
+    detail: (id: string) => `/specialists/${id}/`,
   },
   // Payments
   payments: {

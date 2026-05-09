@@ -42,3 +42,15 @@
 .login-footer p {
   margin: 0;
 }
+
+/* ─── ≤ 480px ─── */
+@media (max-width: 30rem) {
+  .login-title {
+    font-size: 1.5rem;
+  }
+
+  .login-subtitle {
+    font-size: 0.9375rem;
+    margin-bottom: var(--spacing-lg);
+  }
+}

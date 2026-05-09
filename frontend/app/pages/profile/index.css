@@ -194,7 +194,7 @@
   margin: 0;
 }
 
-/* Адаптив для профиля */
+/* ─── ≤ 768px: планшет ─── */
 @media (max-width: 48rem) {
   .profile-content {
     grid-template-columns: 1fr;
@@ -222,5 +222,42 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-xs);
+  }
+}
+
+/* ─── ≤ 640px: телефон ─── */
+@media (max-width: 40rem) {
+  .profile-title {
+    font-size: 1.625rem;
+  }
+
+  .profile-header {
+    margin-bottom: var(--spacing-lg);
+  }
+
+  .section-header {
+    margin-bottom: var(--spacing-md);
+  }
+
+  .security-info {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}
+
+/* ─── ≤ 480px: маленький телефон ─── */
+@media (max-width: 30rem) {
+  .profile-title {
+    font-size: 1.375rem;
+  }
+
+  .avatar-circle {
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.5rem;
+  }
+
+  .profile-edit-form {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
   }
 }

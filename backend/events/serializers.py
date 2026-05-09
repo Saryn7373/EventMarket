@@ -9,29 +9,34 @@ class _RenterShortSerializer(serializers.Serializer):
 
 
 class _VenueShortSerializer(serializers.Serializer):
-    id = serializers.UUIDField()
-    name = serializers.CharField()
-    city = serializers.CharField()
+    id      = serializers.UUIDField()
+    slug    = serializers.SlugField()
+    name    = serializers.CharField()
+    city    = serializers.CharField()
     address = serializers.CharField()
 
 
 class _SpecialistShortSerializer(serializers.Serializer):
-    email = serializers.EmailField(source='user.email')
+    id         = serializers.UUIDField(source='user.id')
+    email      = serializers.EmailField(source='user.email')
     first_name = serializers.CharField(source='user.first_name')
-    last_name = serializers.CharField(source='user.last_name')
-    specialty = serializers.CharField()
+    last_name  = serializers.CharField(source='user.last_name')
+    specialty  = serializers.CharField()
 
 
 class EventListSerializer(serializers.ModelSerializer):
     """Короткое представление для списка"""
-    renter_info = _RenterShortSerializer(source='renter', read_only=True)
-    venues_count = serializers.IntegerField(source='venues.count', read_only=True)
+    renter_info    = _RenterShortSerializer(source='renter', read_only=True)
+    venues_count   = serializers.IntegerField(source='venues.count', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    theme_display  = serializers.CharField(source='get_theme_display', read_only=True)
 
     class Meta:
         model = Event
         fields = [
             'id', 'title', 'date', 'start_time', 'end_time',
-            'theme', 'short_description', 'status',
+            'theme', 'theme_display', 'short_description',
+            'status', 'status_display',
             'expected_guests', 'renter_info', 'venues_count',
             'created_at',
         ]

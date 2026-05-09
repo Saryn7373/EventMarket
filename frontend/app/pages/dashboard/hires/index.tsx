@@ -73,13 +73,18 @@ export default defineComponent({
           params.ordering = ordering.value
         }
 
-        const response = await $api.get<{ results: HireListInfo[]; count: number }>(
+        const response = await $api.get<HireListInfo[] | { results: HireListInfo[]; count: number }>(
           API_ENDPOINTS.hires.my,
           { params }
         )
 
-        hires.value = response.results || []
-        totalCount.value = response.count || 0
+        if (Array.isArray(response)) {
+          hires.value = response
+          totalCount.value = response.length
+        } else {
+          hires.value = response.results ?? []
+          totalCount.value = response.count ?? 0
+        }
       } catch (err: any) {
         error.value = err.message || 'Ошибка загрузки данных'
         console.error('Error loading hires:', err)

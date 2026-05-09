@@ -1,15 +1,21 @@
-from rest_framework import status
+from rest_framework import generics, filters, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django_filters.rest_framework import DjangoFilterBackend
 
+from EventMarket.pagination import StandardPagination
+from .filters import SpecialistFilter
+from .models import Specialist
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
     MeSerializer,
     ChangePasswordSerializer,
+    SpecialistListSerializer,
+    SpecialistDetailSerializer,
 )
 
 
@@ -77,3 +83,30 @@ class ChangePasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"detail": "Пароль успешно изменён."})
+
+
+class SpecialistListView(generics.ListAPIView):
+    """GET /api/specialists/ — публичный список специалистов"""
+    serializer_class = SpecialistListSerializer
+    permission_classes = [AllowAny]
+    pagination_class = StandardPagination
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = SpecialistFilter
+    search_fields = ['user__first_name', 'user__last_name', 'specialty', 'city']
+    ordering_fields = ['rating', 'user__first_name', 'user__last_name']
+    ordering = ['-rating']
+
+    def get_queryset(self):
+        return Specialist.objects.select_related('user', 'user__avatar').all()
+
+
+class SpecialistDetailView(generics.RetrieveAPIView):
+    """GET /api/specialists/<uuid:pk>/ — публичная детальная страница специалиста"""
+    serializer_class = SpecialistDetailSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        return generics.get_object_or_404(
+            Specialist.objects.select_related('user', 'user__avatar'),
+            user__id=self.kwargs['pk'],
+        )

@@ -130,6 +130,12 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         renter = self.context["request"].user.renter
         validate_event_belongs_to_renter(data["event"], renter)
 
+        # 4. Нельзя бронировать для черновых и отменённых мероприятий
+        if data["event"].status in ("draft", "cancelled"):
+            raise serializers.ValidationError(
+                {"event": "Нельзя бронировать площадки для черновых или отменённых мероприятий."}
+            )
+
         # 4. Доступность площадки проверяется в save() внутри транзакции
         return data
 

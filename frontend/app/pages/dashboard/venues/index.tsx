@@ -69,13 +69,18 @@ export default defineComponent({
           params.ordering = ordering.value
         }
 
-        const response = await $api.get<{ results: Venue[]; count: number }>(
+        const response = await $api.get<Venue[] | { results: Venue[]; count: number }>(
           API_ENDPOINTS.venues.my,
           { params }
         )
 
-        venues.value = response.results || []
-        totalCount.value = response.count || 0
+        if (Array.isArray(response)) {
+          venues.value = response
+          totalCount.value = response.length
+        } else {
+          venues.value = response.results ?? []
+          totalCount.value = response.count ?? 0
+        }
       } catch (err: any) {
         error.value = err.message || 'Ошибка загрузки данных'
         console.error('Error loading venues:', err)

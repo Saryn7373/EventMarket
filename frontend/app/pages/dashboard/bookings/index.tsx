@@ -74,13 +74,18 @@ export default defineComponent({
           params.ordering = ordering.value
         }
 
-        const response = await $api.get<{ results: BookingListInfo[]; count: number }>(
+        const response = await $api.get<BookingListInfo[] | { results: BookingListInfo[]; count: number }>(
           API_ENDPOINTS.bookings.my,
           { params }
         )
 
-        bookings.value = response.results || []
-        totalCount.value = response.count || 0
+        if (Array.isArray(response)) {
+          bookings.value = response
+          totalCount.value = response.length
+        } else {
+          bookings.value = response.results ?? []
+          totalCount.value = response.count ?? 0
+        }
       } catch (err: any) {
         error.value = err.message || 'Ошибка загрузки данных'
         console.error('Error loading bookings:', err)

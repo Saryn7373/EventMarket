@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
+from EventMarket.pagination import StandardPagination
 from .models import Booking
 from .serializers import (
     BookingListSerializer,
@@ -155,6 +156,7 @@ class BookingStatusView(APIView):
 class MyBookingsView(generics.ListAPIView):
     serializer_class = BookingListSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = BookingFilter
     ordering_fields = ["start_datetime", "total_price", "created_at"]

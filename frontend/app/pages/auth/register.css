@@ -193,8 +193,51 @@
   margin: 0;
 }
 
+/* ─── ≤ 640px ─── */
 @media (max-width: 40rem) {
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .register-title {
+    font-size: 1.625rem;
+  }
+
+  .role-card {
+    padding: var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+
+  .role-card-icon {
+    font-size: 2rem;
+  }
+}
+
+/* ─── ≤ 480px ─── */
+@media (max-width: 30rem) {
+  .register-title {
+    font-size: 1.375rem;
+  }
+
+  .register-title--small {
+    font-size: 1.25rem;
+  }
+
+  .role-card-label {
+    font-size: 1rem;
+  }
+
+  .role-card-desc {
+    font-size: 0.8125rem;
+  }
+
+  .form-section {
+    padding: var(--spacing-md);
+  }
+
+  .step-nav {
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
   }
 }

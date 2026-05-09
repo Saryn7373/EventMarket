@@ -24,10 +24,16 @@ export default defineNuxtConfig({
     '~/pages/auth/register.css',
     '~/pages/dashboard/index.css',
     '~/pages/profile/index.css',
+    '~/pages/events/[id].css',
+    '~/pages/venues/index.css',
+    '~/pages/venues/[slug].css',
+    '~/pages/specialists/index.css',
+    '~/pages/specialists/[id].css',
     '~/components/ui/Button.css',
     '~/components/ui/Input.css',
     '~/components/ui/Select.css',
     '~/components/ui/Alert.css',
+    '~/components/ui/Dialog.css',
   ],
 
   // App настройки

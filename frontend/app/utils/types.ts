@@ -142,12 +142,14 @@ export interface RenterInfo {
 
 export interface VenueShortInfo {
   id: string
+  slug: string
   name: string
   city: string
   address: string
 }
 
 export interface SpecialistInfo {
+  id: string
   email: string
   first_name: string
   last_name: string
@@ -372,4 +374,31 @@ export interface ApiError {
 
 export interface ApiValidationError {
   [field: string]: string[]
+}
+
+// ============================================
+// Публичные специалисты
+// ============================================
+
+export interface SpecialistPublic {
+  id: string
+  first_name: string
+  last_name: string
+  specialty: string
+  city: string
+  rating: string
+  portfolio_url: string
+  avatar: string | null
+}
+
+export interface SpecialistDetail {
+  id: string
+  first_name: string
+  last_name: string
+  specialty: string
+  license_number: string
+  city: string
+  rating: string
+  portfolio_url: string
+  avatar: string | null
 }

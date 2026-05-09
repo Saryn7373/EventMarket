@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
+from EventMarket.pagination import StandardPagination
 from .models import Event
 from .serializers import (
     EventListSerializer,
@@ -65,6 +66,24 @@ class EventRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             return EventWriteSerializer
         return EventDetailSerializer
 
+    def retrieve(self, request, *args, **kwargs):
+        from django.utils import timezone
+        from datetime import datetime, time as dt_time
+
+        instance = self.get_object()
+
+        # Авто-завершение: если мероприятие прошло и оно не черновик / не отменено
+        if instance.status not in ('draft', 'cancelled', 'completed'):
+            end_time = instance.end_time or dt_time(23, 59, 59)
+            naive_end = datetime.combine(instance.date, end_time)
+            aware_end = timezone.make_aware(naive_end)
+            if aware_end < timezone.now():
+                instance.status = 'completed'
+                instance.save(update_fields=['status', 'updated_at'])
+
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
@@ -96,6 +115,7 @@ class MyEventsView(generics.ListAPIView):
     """
     serializer_class = EventListSerializer
     permission_classes = [IsRenter]
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = EventFilter
     ordering_fields = ['date', 'expected_guests', 'created_at']

@@ -93,6 +93,48 @@ class MeSerializer(serializers.ModelSerializer):
 # Смена пароля
 # ────────────────────────────────────────────────
 
+class SpecialistDetailSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(source='user.id', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Specialist
+        fields = [
+            'id', 'first_name', 'last_name',
+            'specialty', 'license_number', 'city',
+            'rating', 'portfolio_url', 'avatar',
+        ]
+
+    def get_avatar(self, obj):
+        try:
+            request = self.context.get('request')
+            url = obj.user.avatar.image.url
+            return request.build_absolute_uri(url) if request else url
+        except Exception:
+            return None
+
+
+class SpecialistListSerializer(serializers.ModelSerializer):
+    id = serializers.UUIDField(source='user.id', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Specialist
+        fields = ['id', 'first_name', 'last_name', 'specialty', 'city', 'rating', 'portfolio_url', 'avatar']
+
+    def get_avatar(self, obj):
+        try:
+            request = self.context.get('request')
+            url = obj.user.avatar.image.url
+            return request.build_absolute_uri(url) if request else url
+        except Exception:
+            return None
+
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(write_only=True)
     new_password = serializers.CharField(write_only=True)

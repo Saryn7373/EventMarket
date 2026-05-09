@@ -51,12 +51,31 @@
   outline: none;
 }
 
-@media (max-width: 640px) {
-  .auth-container {
+/* ─── ≤ 640px ─── */
+@media (max-width: 40rem) {
+  .layout-auth {
     padding: var(--spacing-md);
+    align-items: flex-start;
+    padding-top: var(--spacing-xl);
   }
 
   .auth-card {
     padding: var(--spacing-lg);
+  }
+
+  .auth-logo {
+    font-size: 1.625rem;
+  }
+}
+
+/* ─── ≤ 480px ─── */
+@media (max-width: 30rem) {
+  .layout-auth {
+    padding: var(--spacing-sm);
+    padding-top: var(--spacing-lg);
+  }
+
+  .auth-card {
+    padding: var(--spacing-md);
   }
 }

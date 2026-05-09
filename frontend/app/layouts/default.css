@@ -21,8 +21,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
   gap: var(--spacing-md);
+  flex-wrap: wrap;
 }
 
 .logo {
@@ -31,6 +31,7 @@
   color: var(--color-primary);
   text-decoration: none;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .logo:hover,
@@ -38,6 +39,7 @@
   color: var(--color-primary-hover);
 }
 
+/* Список навигационных ссылок */
 .header-links {
   display: flex;
   align-items: center;
@@ -68,11 +70,67 @@
   color: var(--color-gray-900);
 }
 
+/* RouterLink active state */
+.nav-link.router-link-active {
+  color: var(--color-primary);
+}
+
 .user-greeting {
   color: var(--color-gray-700);
   font-size: 0.9375rem;
 }
 
+/* ─── Бургер-кнопка ─── */
+.burger-btn {
+  display: none; /* скрыта на десктопе */
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--transition-fast);
+}
+
+.burger-btn:hover {
+  background-color: var(--color-gray-100);
+}
+
+.burger-btn:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.burger-line {
+  display: block;
+  width: 1.375rem;
+  height: 2px;
+  background-color: var(--color-gray-700);
+  border-radius: 1px;
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
+  transform-origin: center;
+}
+
+/* Анимация X при открытом меню */
+.burger-btn--open .burger-line:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.burger-btn--open .burger-line:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.burger-btn--open .burger-line:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ─── Основной контент ─── */
 .app-main {
   flex: 1;
   padding: var(--spacing-xl) 0;
@@ -92,4 +150,79 @@
 .footer-text {
   text-align: center;
   margin: 0;
+}
+
+/* ============================================
+   Адаптивная навигация
+   ============================================ */
+
+/* ─── ≤ 768px: бургер-режим ─── */
+@media (max-width: 48rem) {
+  .burger-btn {
+    display: flex;
+  }
+
+  .header-links {
+    /* Скрыто по умолчанию */
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    border-top: 1px solid var(--color-gray-100);
+    padding: var(--spacing-sm) 0 var(--spacing-md);
+    margin-top: var(--spacing-sm);
+  }
+
+  .header-links--open {
+    display: flex;
+  }
+
+  .header-links > li {
+    display: flex;
+    width: 100%;
+  }
+
+  .nav-link {
+    display: block;
+    width: 100%;
+    padding: 0.625rem var(--spacing-sm);
+    font-size: 1rem;
+    border-radius: var(--radius-md);
+  }
+
+  .nav-link:hover {
+    background-color: var(--color-gray-50);
+  }
+
+  .user-greeting {
+    padding: 0.625rem var(--spacing-sm);
+    font-size: 0.9375rem;
+    color: var(--color-gray-500);
+    border-top: 1px solid var(--color-gray-100);
+    width: 100%;
+    margin-top: var(--spacing-xs);
+  }
+
+  /* Кнопки в мобильном меню */
+  .header-links .btn {
+    width: 100%;
+    justify-content: center;
+    margin-top: var(--spacing-xs);
+  }
+
+  .app-main {
+    padding: var(--spacing-lg) 0;
+  }
+}
+
+/* ─── ≤ 480px: маленький телефон ─── */
+@media (max-width: 30rem) {
+  .app-main {
+    padding: var(--spacing-md) 0;
+  }
+
+  .logo {
+    font-size: 1.25rem;
+  }
 }

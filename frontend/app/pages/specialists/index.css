@@ -1,0 +1,247 @@
+/* ============================================
+   Публичный каталог специалистов
+   ============================================ */
+
+/* Переиспользуем базовые стили из venues/index.css:
+   .catalog-page, .catalog-header, .catalog-title, .catalog-subtitle,
+   .catalog-search, .catalog-search__input, .catalog-search__hint,
+   .catalog-loading, .catalog-load-more, .catalog-end, .catalog-sentinel
+   — эти классы определены в pages/venues/index.css и подключены глобально */
+
+/* Сетка специалистов */
+.specialists-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--spacing-lg);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.specialists-grid > li {
+  display: block;
+}
+
+/* Ссылки-обёртки */
+.specialist-card__avatar-link {
+  display: block;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.specialist-card__name-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.specialist-card__name-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* Карточка специалиста */
+.specialist-card {
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-lg);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  height: 100%;
+  transition: box-shadow var(--transition-normal), border-color var(--transition-fast);
+}
+
+.specialist-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary);
+}
+
+/* Аватар */
+.specialist-card__avatar {
+  flex-shrink: 0;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background-color: var(--color-primary-light);
+}
+
+.specialist-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.specialist-card__avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  user-select: none;
+}
+
+/* Контент */
+.specialist-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  flex: 1;
+  min-width: 0;
+}
+
+.specialist-card__name {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.specialist-card__specialty {
+  font-size: 0.875rem;
+  color: var(--color-primary);
+  font-weight: 500;
+  margin: 0;
+}
+
+.specialist-card__city {
+  font-size: 0.8125rem;
+  color: var(--color-gray-600);
+  margin: 0;
+}
+
+/* Рейтинг */
+.specialist-card__rating {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-xs);
+}
+
+.specialist-card__stars {
+  color: #f59e0b;
+  font-size: 0.9375rem;
+  letter-spacing: 1px;
+}
+
+.specialist-card__rating-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-gray-700);
+}
+
+/* Портфолио */
+.specialist-card__portfolio {
+  display: inline-block;
+  margin-top: var(--spacing-xs);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.specialist-card__portfolio:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+/* ─── ≤ 768px: планшет портретный ─── */
+@media (max-width: 48rem) {
+  /* Панель фильтров: 2 колонки на планшете */
+  #specialist-filters .vf-panel__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .specialists-grid {
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+    gap: var(--spacing-md);
+  }
+
+  .specialist-card {
+    padding: var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+
+  .specialist-card__avatar {
+    width: 3.75rem;
+    height: 3.75rem;
+  }
+
+  .specialist-card__avatar-placeholder {
+    font-size: 1.25rem;
+  }
+}
+
+/* ─── ≤ 640px: большой телефон / горизонтальная ориентация ─── */
+@media (max-width: 40rem) {
+  #specialist-filters .vf-panel__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .specialists-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  /* карточка остаётся горизонтальной — аватар слева, текст справа */
+  .specialist-card {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .specialist-card__avatar {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .specialist-card__name {
+    font-size: 1rem;
+    -webkit-line-clamp: 1;
+  }
+
+  .specialist-card__stars {
+    font-size: 0.875rem;
+  }
+}
+
+/* ─── ≤ 480px: телефон в портретной ориентации ─── */
+@media (max-width: 30rem) {
+  .specialist-card {
+    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+
+  .specialist-card__avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .specialist-card__avatar-placeholder {
+    font-size: 1rem;
+  }
+
+  .specialist-card__name {
+    font-size: 0.9375rem;
+  }
+
+  .specialist-card__specialty {
+    font-size: 0.8125rem;
+  }
+
+  .specialist-card__city,
+  .specialist-card__rating-value {
+    font-size: 0.75rem;
+  }
+
+  .specialist-card__portfolio {
+    font-size: 0.8125rem;
+  }
+}

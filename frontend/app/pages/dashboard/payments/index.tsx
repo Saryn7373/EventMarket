@@ -74,13 +74,18 @@ export default defineComponent({
           params.ordering = ordering.value
         }
 
-        const response = await $api.get<{ results: PaymentListInfo[]; count: number }>(
+        const response = await $api.get<PaymentListInfo[] | { results: PaymentListInfo[]; count: number }>(
           API_ENDPOINTS.payments.my,
           { params }
         )
 
-        payments.value = response.results || []
-        totalCount.value = response.count || 0
+        if (Array.isArray(response)) {
+          payments.value = response
+          totalCount.value = response.length
+        } else {
+          payments.value = response.results ?? []
+          totalCount.value = response.count ?? 0
+        }
 
         // Считаем общую сумму
         totalAmount.value = payments.value.reduce((sum, p) => sum + p.amount, 0)

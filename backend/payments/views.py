@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
+from EventMarket.pagination import StandardPagination
 from .models import Payment
 from .serializers import (
     PaymentListSerializer,
@@ -140,6 +141,7 @@ class MyPaymentsView(generics.ListAPIView):
 
     serializer_class = PaymentListSerializer
     permission_classes = [IsRenter]
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = PaymentFilter
     ordering_fields = ["created_at", "paid_at", "amount"]

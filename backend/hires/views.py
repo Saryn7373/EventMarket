@@ -6,6 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
+from EventMarket.pagination import StandardPagination
 from .models import Hire
 from .serializers import (
     HireListSerializer,
@@ -164,6 +165,7 @@ class MyHiresView(generics.ListAPIView):
 
     serializer_class = HireListSerializer
     permission_classes = [IsRenter]
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = HireFilter
     ordering_fields = ["start_datetime", "total_price", "created_at"]
@@ -182,6 +184,7 @@ class SpecialistHiresView(generics.ListAPIView):
 
     serializer_class = HireListSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_class = HireFilter
     ordering_fields = ["start_datetime", "total_price", "created_at"]
@@ -212,7 +215,7 @@ class SpecialistAvailabilityView(APIView):
         from django.utils import timezone
         from users.models import Specialist
 
-        specialist = get_object_or_404(Specialist, pk=specialist_id)
+        specialist = get_object_or_404(Specialist, user_id=specialist_id)
 
         # Получаем параметры из запроса
         from_str = request.query_params.get("from")

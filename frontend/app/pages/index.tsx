@@ -1,5 +1,7 @@
 import { defineComponent } from 'vue'
 
+definePageMeta({ middleware: 'home' })
+
 export default defineComponent({
   name: 'HomePage',
   setup() {

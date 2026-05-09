@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 
+from EventMarket.pagination import StandardPagination
 from .models import Venue, VenueImage
 from .serializers import (
     VenueListSerializer,
@@ -21,6 +22,7 @@ from .filters import VenueFilter
 # ────────────────────────────────────────────────
 
 class VenueListCreateView(generics.ListCreateAPIView):
+    pagination_class = StandardPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = VenueFilter
     search_fields   = ['name', 'city', 'address', 'short_description']
@@ -105,6 +107,7 @@ class VenueRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 class MyVenuesView(generics.ListAPIView):
     serializer_class = VenueListSerializer
     permission_classes = [IsOwnerUser]
+    pagination_class = StandardPagination
 
     def get_queryset(self):
         return Venue.objects.filter(
@@ -139,3 +142,19 @@ class VenueImageDeleteView(APIView):
         )
         image.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ────────────────────────────────────────────────
+# GET /api/venues/slug/<slug>/ — публичная детальная страница по slug
+# ────────────────────────────────────────────────
+
+class VenueBySlugView(generics.RetrieveAPIView):
+    serializer_class = VenueDetailSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        return generics.get_object_or_404(
+            Venue.objects.select_related('owner__user').prefetch_related('images'),
+            slug=self.kwargs['slug'],
+            status='published',
+        )
