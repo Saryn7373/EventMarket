@@ -1,12 +1,50 @@
-import { defineComponent } from 'vue'
+import { defineComponent, ref, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
+import { useApi } from '~/composables/useApi'
+import { API_ENDPOINTS } from '~/utils/constants'
+import type { Venue, SpecialistPublic } from '~/utils/types'
 
 definePageMeta({ middleware: 'home' })
 
 export default defineComponent({
   name: 'HomePage',
   setup() {
+    const $api = useApi()
+
+    const venues      = ref<Venue[]>([])
+    const specialists = ref<SpecialistPublic[]>([])
+
+    const formatCurrency = (amount: number | null): string => {
+      if (!amount) return 'Не указана'
+      return new Intl.NumberFormat('ru-RU', {
+        style: 'currency', currency: 'RUB', minimumFractionDigits: 0,
+      }).format(amount)
+    }
+
+    const formatRating = (rating: string) => {
+      const n = parseFloat(rating)
+      return isNaN(n) ? '—' : n.toFixed(1)
+    }
+
+    const ratingStars = (rating: string) => {
+      const n = parseFloat(rating)
+      if (isNaN(n) || n === 0) return ''
+      const filled = Math.round(n)
+      return '★'.repeat(filled) + '☆'.repeat(5 - filled)
+    }
+
+    onMounted(async () => {
+      const [venuesRes, specialistsRes] = await Promise.allSettled([
+        $api.get<{ results: Venue[] }>(API_ENDPOINTS.venues.list, { params: { page_size: 3 } }),
+        $api.get<{ results: SpecialistPublic[] }>(API_ENDPOINTS.specialists.list, { params: { page_size: 3, ordering: '-rating' } }),
+      ])
+      if (venuesRes.status === 'fulfilled')      venues.value      = venuesRes.value.results
+      if (specialistsRes.status === 'fulfilled') specialists.value = specialistsRes.value.results
+    })
+
     return () => (
       <div class="home-page">
+        {/* ── Hero ── */}
         <section class="hero" aria-labelledby="hero-title">
           <div class="container">
             <h1 id="hero-title" class="hero-title">
@@ -26,6 +64,7 @@ export default defineComponent({
           </div>
         </section>
 
+        {/* ── Фичи ── */}
         <section class="features" aria-labelledby="features-title">
           <div class="container">
             <h2 id="features-title" class="sr-only">
@@ -59,6 +98,147 @@ export default defineComponent({
             </ul>
           </div>
         </section>
+
+        {/* ── Площадки ── */}
+        {venues.value.length > 0 && (
+          <section class="home-section" aria-labelledby="home-venues-title">
+            <div class="container">
+              <div class="home-section__header">
+                <h2 id="home-venues-title" class="home-section__title">Площадки</h2>
+                <RouterLink to="/venues" class="home-section__link">Смотреть все →</RouterLink>
+              </div>
+              <ul class="home-venues-grid" aria-label="Площадки">
+                {venues.value.map((venue) => {
+                  const titleId = `hv-${venue.id}-title`
+                  return (
+                    <li key={venue.id}>
+                      <article class="pub-venue-card" aria-labelledby={titleId}>
+                        <RouterLink
+                          to={`/venues/${venue.slug}`}
+                          class="pub-venue-card__link"
+                          aria-label={`Открыть страницу площадки «${venue.name}»`}
+                          tabindex="-1"
+                          aria-hidden="true"
+                        >
+                          {venue.main_photo ? (
+                            <div class="pub-venue-card__photo">
+                              <img src={venue.main_photo} alt="" loading="lazy" />
+                            </div>
+                          ) : (
+                            <div class="pub-venue-card__photo pub-venue-card__photo--placeholder" aria-hidden="true">
+                              🏛️
+                            </div>
+                          )}
+                        </RouterLink>
+                        <div class="pub-venue-card__body">
+                          <h3 id={titleId} class="pub-venue-card__title">
+                            <RouterLink to={`/venues/${venue.slug}`} class="pub-venue-card__title-link">
+                              {venue.name}
+                            </RouterLink>
+                          </h3>
+                          <p class="pub-venue-card__location">
+                            <span aria-hidden="true">📍</span>{' '}
+                            {venue.city}{venue.address ? `, ${venue.address}` : ''}
+                          </p>
+                          <dl class="pub-venue-card__details">
+                            <div class="pub-venue-card__detail">
+                              <dt>Вместимость</dt>
+                              <dd>
+                                {venue.capacity_min && venue.capacity_max
+                                  ? `${venue.capacity_min}–${venue.capacity_max} чел.`
+                                  : `до ${venue.capacity_max} чел.`}
+                              </dd>
+                            </div>
+                            {venue.price_per_hour && (
+                              <div class="pub-venue-card__detail">
+                                <dt>За час</dt>
+                                <dd class="pub-venue-card__price">{formatCurrency(venue.price_per_hour)}</dd>
+                              </div>
+                            )}
+                            {venue.price_per_day && (
+                              <div class="pub-venue-card__detail">
+                                <dt>За день</dt>
+                                <dd class="pub-venue-card__price">{formatCurrency(venue.price_per_day)}</dd>
+                              </div>
+                            )}
+                          </dl>
+                          {venue.is_verified && (
+                            <span class="pub-venue-card__verified" title="Верифицированная площадка">
+                              <span aria-hidden="true">✓</span> Верифицировано
+                            </span>
+                          )}
+                        </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          </section>
+        )}
+
+        {/* ── Лучшие специалисты ── */}
+        {specialists.value.length > 0 && (
+          <section class="home-section" aria-labelledby="home-specialists-title">
+            <div class="container">
+              <div class="home-section__header">
+                <h2 id="home-specialists-title" class="home-section__title">Лучшие специалисты</h2>
+                <RouterLink to="/specialists" class="home-section__link">Смотреть все →</RouterLink>
+              </div>
+              <ul class="home-specialists-grid" aria-label="Лучшие специалисты">
+                {specialists.value.map((spec) => {
+                  const titleId = `hs-${spec.id}-title`
+                  const fullName = `${spec.first_name} ${spec.last_name}`.trim() || 'Специалист'
+                  return (
+                    <li key={spec.id}>
+                      <article class="specialist-card" aria-labelledby={titleId}>
+                        <RouterLink
+                          to={`/specialists/${spec.id}`}
+                          class="specialist-card__avatar-link"
+                          tabindex="-1"
+                          aria-hidden="true"
+                        >
+                          <div class="specialist-card__avatar">
+                            {spec.avatar ? (
+                              <img src={spec.avatar} alt="" loading="lazy" />
+                            ) : (
+                              <span class="specialist-card__avatar-placeholder">
+                                {spec.first_name?.[0]?.toUpperCase() || '?'}
+                              </span>
+                            )}
+                          </div>
+                        </RouterLink>
+                        <div class="specialist-card__body">
+                          <h3 id={titleId} class="specialist-card__name">
+                            <RouterLink to={`/specialists/${spec.id}`} class="specialist-card__name-link">
+                              {fullName}
+                            </RouterLink>
+                          </h3>
+                          {spec.specialty && (
+                            <p class="specialist-card__specialty">{spec.specialty}</p>
+                          )}
+                          {spec.city && (
+                            <p class="specialist-card__city">
+                              <span aria-hidden="true">📍</span> {spec.city}
+                            </p>
+                          )}
+                          {parseFloat(spec.rating) > 0 && (
+                            <div class="specialist-card__rating" aria-label={`Рейтинг ${formatRating(spec.rating)} из 5`}>
+                              <span class="specialist-card__stars" aria-hidden="true">
+                                {ratingStars(spec.rating)}
+                              </span>
+                              <span class="specialist-card__rating-value">{formatRating(spec.rating)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          </section>
+        )}
       </div>
     )
   },

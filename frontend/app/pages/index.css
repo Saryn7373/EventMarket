@@ -65,6 +65,49 @@
   line-height: 1.6;
 }
 
+/* ── Виджеты секций ── */
+.home-section {
+  padding: var(--spacing-xl) 0;
+}
+
+.home-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.home-section__title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-gray-900);
+  margin: 0;
+}
+
+.home-section__link {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.home-section__link:hover {
+  text-decoration: underline;
+}
+
+.home-venues-grid,
+.home-specialists-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-lg);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
 /* ─── ≤ 768px ─── */
 @media (max-width: 48rem) {
   .hero {
@@ -81,6 +124,16 @@
 
   .home-page {
     gap: var(--spacing-xl);
+  }
+
+  .home-section__title {
+    font-size: 1.5rem;
+  }
+
+  .home-venues-grid,
+  .home-specialists-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
   }
 }
 
@@ -110,6 +163,11 @@
 
   .feature-title {
     font-size: 1.25rem;
+  }
+
+  .home-venues-grid,
+  .home-specialists-grid {
+    grid-template-columns: 1fr;
   }
 }
 

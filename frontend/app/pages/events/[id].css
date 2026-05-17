@@ -367,6 +367,19 @@
   transform: translateX(3px);
 }
 
+/* ── Бейдж статуса бронирования / найма ── */
+.ep-relation-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
 /* ── Пустые состояния ── */
 .ep-empty {
   display: flex;

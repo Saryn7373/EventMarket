@@ -1,5 +1,5 @@
-import { defineComponent, ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { defineComponent, ref, reactive, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '~/composables/useApi'
 import { useUserStore } from '~/stores/user'
 import { API_ENDPOINTS } from '~/utils/constants'
@@ -8,46 +8,91 @@ import UiDialog from '~/components/ui/Dialog'
 import UiSelect from '~/components/ui/Select'
 import UiAlert from '~/components/ui/Alert'
 
+interface EditForm {
+  name: string
+  city: string
+  postal_code: string
+  latitude: string
+  longitude: string
+  capacity_min: number
+  capacity_max: number
+  area_sq_m: string
+  min_booking_hours: number
+  short_description: string
+  description: string
+  cancellation_policy: string
+}
+
 export default defineComponent({
   name: 'VenueDetailPage',
   setup() {
-    const route = useRoute()
-    const $api = useApi()
+    const route     = useRoute()
+    const router    = useRouter()
+    const $api      = useApi()
     const userStore = useUserStore()
 
     // ── Данные площадки ──
-    const venue = ref<Venue | null>(null)
-    const loading = ref(true)
-    const error = ref<string | null>(null)
-    const currentImageIndex = ref(0)
+    const venue              = ref<Venue | null>(null)
+    const loading            = ref(true)
+    const error              = ref<string | null>(null)
+    const currentImageIndex  = ref(0)
 
-    const slug = computed(() => route.params.slug as string)
-    const images = computed(() => venue.value?.images ?? [])
-    const hasImages = computed(() => images.value.length > 0)
+    const slug       = computed(() => route.params.slug as string)
+    const images     = computed(() => venue.value?.images ?? [])
+    const hasImages  = computed(() => images.value.length > 0)
     const currentImage = computed(() => images.value[currentImageIndex.value] ?? null)
-    const totalImages = computed(() => images.value.length)
+    const totalImages  = computed(() => images.value.length)
 
-    const prevImage = () => { if (currentImageIndex.value > 0) currentImageIndex.value-- }
-    const nextImage = () => { if (currentImageIndex.value < totalImages.value - 1) currentImageIndex.value++ }
-    const goToImage = (idx: number) => { currentImageIndex.value = idx }
+    const prevImage  = () => { if (currentImageIndex.value > 0) currentImageIndex.value-- }
+    const nextImage  = () => { if (currentImageIndex.value < totalImages.value - 1) currentImageIndex.value++ }
+    const goToImage  = (idx: number) => { currentImageIndex.value = idx }
 
     // ── Пользователь ──
     const isLoggedIn = computed(() => !!userStore.user)
     const isRenter   = computed(() => userStore.user?.role === 'renter')
+    const isOwner    = computed(() => !!userStore.user && userStore.user.email === venue.value?.owner_email)
 
     // ── Диалог бронирования ──
-    const bookingOpen    = ref(false)
-    const myEvents       = ref<Event[]>([])
-    const eventsLoading  = ref(false)
+    const bookingOpen     = ref(false)
+    const myEvents        = ref<Event[]>([])
+    const eventsLoading   = ref(false)
     const selectedEventId = ref('')
-    const selectedEvent  = ref<Event | null>(null)
-    const bookingStart   = ref('')
-    const bookingEnd     = ref('')
-    const timeConflict   = ref(false)
-    const eventHasVenue  = ref(false)
-    const submitting     = ref(false)
-    const submitError    = ref('')
-    const bookingSuccess = ref(false)
+    const selectedEvent   = ref<Event | null>(null)
+    const bookingStart    = ref('')
+    const bookingEnd      = ref('')
+    const timeConflict    = ref(false)
+    const eventHasVenue   = ref(false)
+    const submitting      = ref(false)
+    const submitError     = ref('')
+    const bookingSuccess  = ref(false)
+
+    // ── Наличие активных броней (для владельца, из данных площадки) ──
+    const bookingsChecked   = computed(() => !loading.value && !!venue.value)
+    const hasActiveBookings = computed(() => venue.value?.has_active_bookings ?? false)
+
+    // ── Диалог редактирования ──
+    const editOpen       = ref(false)
+    const editSubmitting = ref(false)
+    const editError      = ref('')
+
+    const editForm = reactive<EditForm>({
+      name: '', city: '', postal_code: '',
+      latitude: '', longitude: '',
+      capacity_min: 10, capacity_max: 100,
+      area_sq_m: '', min_booking_hours: 2,
+      short_description: '', description: '',
+      cancellation_policy: '',
+    })
+
+    // ── Фото в форме редактирования ──
+    const pendingDeleteIds  = ref<number[]>([])
+    const newEditFiles      = ref<File[]>([])
+    const newEditPreviews   = ref<string[]>([])
+
+    // ── Диалог удаления ──
+    const deleteOpen       = ref(false)
+    const deleteSubmitting = ref(false)
+    const deleteError      = ref('')
 
     // ── Форматирование ──
     const formatCurrency = (amount: string | number | null): string => {
@@ -98,7 +143,7 @@ export default defineComponent({
       return null
     })
 
-    // ── Открыть диалог ──
+    // ── Открыть диалог бронирования ──
     const openBookingDialog = async () => {
       selectedEventId.value = ''
       selectedEvent.value   = null
@@ -160,18 +205,12 @@ export default defineComponent({
       try {
         const ev = await $api.get<Event>(API_ENDPOINTS.events.detail(eventId))
         selectedEvent.value = ev
-
-        // Одно помещение на мероприятие
         eventHasVenue.value = ev.venues.length > 0
-
         if (!eventHasVenue.value) {
-          // Предзаполнение дат из мероприятия
           const date      = ev.date
           const startTime = ev.start_time?.slice(0, 5) ?? '10:00'
           const endTime   = ev.end_time?.slice(0, 5) ?? ''
-
           bookingStart.value = `${date}T${startTime}`
-
           if (endTime) {
             bookingEnd.value = `${date}T${endTime}`
           } else {
@@ -180,7 +219,6 @@ export default defineComponent({
             const endH     = String((hh + minH) % 24).padStart(2, '0')
             bookingEnd.value = `${date}T${endH}:${String(mm).padStart(2, '0')}`
           }
-
           await checkAvailability()
         }
       } catch {
@@ -210,6 +248,134 @@ export default defineComponent({
         }
       } finally {
         submitting.value = false
+      }
+    }
+
+    // ── Открыть диалог редактирования ──
+    const openEditDialog = () => {
+      if (!venue.value) return
+      const v = venue.value
+      Object.assign(editForm, {
+        name:                v.name,
+        city:                v.city,
+        postal_code:         v.postal_code ?? '',
+        latitude:            v.latitude  != null ? String(v.latitude)  : '',
+        longitude:           v.longitude != null ? String(v.longitude) : '',
+        capacity_min:        v.capacity_min,
+        capacity_max:        v.capacity_max,
+        area_sq_m:           v.area_sq_m != null ? String(v.area_sq_m) : '',
+        min_booking_hours:   v.min_booking_hours,
+        short_description:   v.short_description ?? '',
+        description:         v.description ?? '',
+        cancellation_policy: v.cancellation_policy ?? '',
+      })
+      pendingDeleteIds.value = []
+      newEditFiles.value     = []
+      newEditPreviews.value.forEach(url => URL.revokeObjectURL(url))
+      newEditPreviews.value  = []
+      editError.value        = ''
+      editOpen.value         = true
+    }
+
+    const closeEditDialog = () => {
+      editOpen.value = false
+      pendingDeleteIds.value = []
+      newEditFiles.value     = []
+      newEditPreviews.value.forEach(url => URL.revokeObjectURL(url))
+      newEditPreviews.value  = []
+    }
+
+    // ── Работа с новыми фото в форме редактирования ──
+    const handleEditFiles = (e: Event) => {
+      const files = Array.from((e.target as HTMLInputElement).files ?? [])
+      if (!files.length) return
+      newEditFiles.value    = [...newEditFiles.value, ...files]
+      newEditPreviews.value = [...newEditPreviews.value, ...files.map(f => URL.createObjectURL(f))]
+      ;(e.target as HTMLInputElement).value = ''
+    }
+
+    const removeEditFile = (index: number) => {
+      URL.revokeObjectURL(newEditPreviews.value[index])
+      newEditFiles.value    = newEditFiles.value.filter((_, i) => i !== index)
+      newEditPreviews.value = newEditPreviews.value.filter((_, i) => i !== index)
+    }
+
+    // ── Отправка изменений площадки ──
+    const submitEdit = async () => {
+      if (!venue.value) return
+      editSubmitting.value = true
+      editError.value      = ''
+
+      const payload: Record<string, any> = {
+        name:                editForm.name,
+        city:                editForm.city,
+        postal_code:         editForm.postal_code,
+        capacity_min:        editForm.capacity_min,
+        capacity_max:        editForm.capacity_max,
+        min_booking_hours:   editForm.min_booking_hours,
+        short_description:   editForm.short_description,
+        description:         editForm.description,
+        cancellation_policy: editForm.cancellation_policy,
+      }
+      if (editForm.area_sq_m)  payload.area_sq_m  = parseFloat(editForm.area_sq_m)
+      if (editForm.latitude)   payload.latitude   = parseFloat(editForm.latitude)
+      if (editForm.longitude)  payload.longitude  = parseFloat(editForm.longitude)
+
+      try {
+        const venueId = venue.value.id
+
+        // 1. Основные данные
+        await $api.patch<Venue>(API_ENDPOINTS.venues.detail(venueId), payload)
+
+        // 2. Удалить помеченные фотографии
+        for (const imageId of pendingDeleteIds.value) {
+          await $api.delete(API_ENDPOINTS.venues.deleteImage(venueId, imageId))
+        }
+
+        // 3. Загрузить новые фотографии
+        const remainingCount = (venue.value.images ?? [])
+          .filter(img => !pendingDeleteIds.value.includes(img.id)).length
+        for (let i = 0; i < newEditFiles.value.length; i++) {
+          const fd = new FormData()
+          fd.append('image', newEditFiles.value[i])
+          fd.append('order', String(remainingCount + i))
+          await $api.post(API_ENDPOINTS.venues.images(venueId), fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          })
+        }
+
+        // 4. Обновить данные страницы
+        venue.value = await $api.get<Venue>(API_ENDPOINTS.venues.bySlug(slug.value))
+
+        // 5. Закрыть и очистить состояние
+        editOpen.value         = false
+        pendingDeleteIds.value = []
+        newEditFiles.value     = []
+        newEditPreviews.value.forEach(url => URL.revokeObjectURL(url))
+        newEditPreviews.value  = []
+      } catch (e: any) {
+        if (e.data && typeof e.data === 'object' && !e.data.detail) {
+          editError.value = (Object.values(e.data) as any[]).flat().join(' ')
+        } else {
+          editError.value = e.data?.detail || e.message || 'Ошибка при сохранении'
+        }
+      } finally {
+        editSubmitting.value = false
+      }
+    }
+
+    // ── Подтверждение удаления ──
+    const confirmDelete = async () => {
+      if (!venue.value) return
+      deleteSubmitting.value = true
+      deleteError.value      = ''
+      try {
+        await $api.delete(API_ENDPOINTS.venues.detail(venue.value.id))
+        router.push('/dashboard')
+      } catch (e: any) {
+        deleteError.value = e.data?.detail || e.message || 'Ошибка при удалении'
+      } finally {
+        deleteSubmitting.value = false
       }
     }
 
@@ -249,6 +415,40 @@ export default defineComponent({
               Забронировать
             </button>
           )
+
+      // Панель управления для владельца
+      const ownerActions = isOwner.value && (
+        <div class="vd-owner-actions" aria-label="Управление площадкой">
+          <h3 class="vd-owner-actions__title">Управление площадкой</h3>
+          {!bookingsChecked.value ? (
+            <p class="vd-owner-actions__checking">
+              <span class="spinner" aria-hidden="true" />
+              Проверка бронирований...
+            </p>
+          ) : hasActiveBookings.value ? (
+            <p class="vd-owner-hint">
+              Изменить или удалить площадку нельзя — по ней есть активные бронирования.
+            </p>
+          ) : (
+            <div class="vd-owner-buttons">
+              <button
+                type="button"
+                class="btn btn--secondary vd-owner-btn"
+                onClick={openEditDialog}
+              >
+                Редактировать
+              </button>
+              <button
+                type="button"
+                class="vd-btn-danger vd-owner-btn"
+                onClick={() => { deleteError.value = ''; deleteOpen.value = true }}
+              >
+                Удалить
+              </button>
+            </div>
+          )}
+        </div>
+      )
 
       return (
         <article class="vd-page" aria-labelledby="vd-title">
@@ -426,6 +626,7 @@ export default defineComponent({
                   </p>
 
                   {bookBtn}
+                  {ownerActions}
                 </div>
               </aside>
             </div>
@@ -480,7 +681,6 @@ export default defineComponent({
                       </div>
                     ) : (
                       <>
-                        {/* Выбор мероприятия */}
                         <UiSelect
                           id="vd-booking-event"
                           label="Мероприятие"
@@ -490,7 +690,6 @@ export default defineComponent({
                           required
                         />
 
-                        {/* Блокирующий алерт: помещение уже есть */}
                         {eventHasVenue.value && selectedEvent.value && (
                           <div class="vd-booking-form__alert">
                             <UiAlert variant="error" title="Помещение уже забронировано">
@@ -501,7 +700,6 @@ export default defineComponent({
                           </div>
                         )}
 
-                        {/* Дата и время (только если нет конфликта с event.venues) */}
                         {selectedEventId.value && !eventHasVenue.value && (
                           <>
                             <div class="vd-booking-row">
@@ -522,7 +720,6 @@ export default defineComponent({
                                   }}
                                 />
                               </div>
-
                               <div class="input-wrapper">
                                 <label class="input-label" for="vd-booking-end">
                                   Конец аренды
@@ -542,7 +739,6 @@ export default defineComponent({
                               </div>
                             </div>
 
-                            {/* Предупреждение о занятости */}
                             {timeConflict.value && (
                               <div class="vd-booking-conflict" role="alert">
                                 <span class="vd-booking-conflict__icon" aria-hidden="true">⚠️</span>
@@ -553,7 +749,6 @@ export default defineComponent({
                               </div>
                             )}
 
-                            {/* Примерная стоимость */}
                             {estimatedPrice.value !== null && (
                               <div class="vd-booking-estimate">
                                 <span class="vd-booking-estimate__label">Примерная стоимость:</span>
@@ -614,6 +809,279 @@ export default defineComponent({
               ),
             }}
           </UiDialog>
+
+          {/* ── Диалог редактирования ── */}
+          <UiDialog
+            open={editOpen.value}
+            title={`Редактировать «${v.name}»`}
+            size="lg"
+            onClose={closeEditDialog}
+          >
+            {{
+              default: () => (
+                <form
+                  id="vd-edit-form"
+                  class="vd-edit-form"
+                  onSubmit={(e) => { e.preventDefault(); submitEdit() }}
+                  novalidate
+                  aria-label="Форма редактирования площадки"
+                >
+                  {editError.value && (
+                    <UiAlert variant="error" title="Ошибка">{editError.value}</UiAlert>
+                  )}
+
+                  {/* Название */}
+                  <div class="input-wrapper">
+                    <label class="input-label" for="ve-name">
+                      Название <span class="input-required" aria-hidden="true">*</span>
+                    </label>
+                    <input
+                      id="ve-name" type="text" class="input"
+                      value={editForm.name} required
+                      onInput={(e) => { editForm.name = (e.target as HTMLInputElement).value }}
+                    />
+                  </div>
+
+                  {/* Город + Индекс */}
+                  <div class="vd-edit-row-2">
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-city">
+                        Город <span class="input-required" aria-hidden="true">*</span>
+                      </label>
+                      <input
+                        id="ve-city" type="text" class="input"
+                        value={editForm.city} required
+                        onInput={(e) => { editForm.city = (e.target as HTMLInputElement).value }}
+                      />
+                    </div>
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-postal">Почтовый индекс</label>
+                      <input
+                        id="ve-postal" type="text" class="input"
+                        value={editForm.postal_code}
+                        onInput={(e) => { editForm.postal_code = (e.target as HTMLInputElement).value }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Вместимость */}
+                  <div class="vd-edit-row-2">
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-cap-min">Вместимость (мин.)</label>
+                      <input
+                        id="ve-cap-min" type="number" class="input" min="1"
+                        value={editForm.capacity_min}
+                        onInput={(e) => { editForm.capacity_min = parseInt((e.target as HTMLInputElement).value) || 1 }}
+                      />
+                    </div>
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-cap-max">Вместимость (макс.)</label>
+                      <input
+                        id="ve-cap-max" type="number" class="input" min="1"
+                        value={editForm.capacity_max}
+                        onInput={(e) => { editForm.capacity_max = parseInt((e.target as HTMLInputElement).value) || 1 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Площадь + Мин. аренда */}
+                  <div class="vd-edit-row-2">
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-area">Площадь (м²)</label>
+                      <input
+                        id="ve-area" type="number" class="input" min="1" placeholder="Не указана"
+                        value={editForm.area_sq_m}
+                        onInput={(e) => { editForm.area_sq_m = (e.target as HTMLInputElement).value }}
+                      />
+                    </div>
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-min-hours">Мин. часов аренды</label>
+                      <input
+                        id="ve-min-hours" type="number" class="input" min="1"
+                        value={editForm.min_booking_hours}
+                        onInput={(e) => { editForm.min_booking_hours = parseInt((e.target as HTMLInputElement).value) || 1 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Координаты */}
+                  <div class="vd-edit-row-2">
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-lat">Широта</label>
+                      <input
+                        id="ve-lat" type="number" class="input" step="any" placeholder="55.7558"
+                        value={editForm.latitude}
+                        onInput={(e) => { editForm.latitude = (e.target as HTMLInputElement).value }}
+                      />
+                    </div>
+                    <div class="input-wrapper">
+                      <label class="input-label" for="ve-lng">Долгота</label>
+                      <input
+                        id="ve-lng" type="number" class="input" step="any" placeholder="37.6173"
+                        value={editForm.longitude}
+                        onInput={(e) => { editForm.longitude = (e.target as HTMLInputElement).value }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Краткое описание */}
+                  <div class="input-wrapper">
+                    <label class="input-label" for="ve-short-desc">
+                      Краткое описание
+                      <span class="vf-hint-inline">({editForm.short_description.length}/300)</span>
+                    </label>
+                    <textarea
+                      id="ve-short-desc" class="input vd-edit-textarea" rows={2} maxlength={300}
+                      value={editForm.short_description}
+                      onInput={(e) => { editForm.short_description = (e.target as HTMLTextAreaElement).value }}
+                    />
+                  </div>
+
+                  {/* Полное описание */}
+                  <div class="input-wrapper">
+                    <label class="input-label" for="ve-desc">Полное описание</label>
+                    <textarea
+                      id="ve-desc" class="input vd-edit-textarea" rows={4}
+                      value={editForm.description}
+                      onInput={(e) => { editForm.description = (e.target as HTMLTextAreaElement).value }}
+                    />
+                  </div>
+
+                  {/* Политика отмены */}
+                  <div class="input-wrapper">
+                    <label class="input-label" for="ve-cancel">Политика отмены</label>
+                    <textarea
+                      id="ve-cancel" class="input vd-edit-textarea" rows={3}
+                      value={editForm.cancellation_policy}
+                      onInput={(e) => { editForm.cancellation_policy = (e.target as HTMLTextAreaElement).value }}
+                    />
+                  </div>
+
+                  {/* Фотографии */}
+                  <div class="input-wrapper">
+                    <span class="input-label">Фотографии</span>
+
+                    {/* Текущие фото */}
+                    {(v.images ?? []).filter(img => !pendingDeleteIds.value.includes(img.id)).length > 0 && (
+                      <div class="vcf__photo-grid vd-edit-photo-section">
+                        {(v.images ?? [])
+                          .filter(img => !pendingDeleteIds.value.includes(img.id))
+                          .map(img => (
+                            <div key={img.id} class="vcf__photo-item">
+                              <img src={img.image} alt="" class="vcf__photo-img" loading="lazy" />
+                              <button
+                                type="button"
+                                class="vcf__photo-remove"
+                                aria-label="Удалить фото"
+                                onClick={() => { pendingDeleteIds.value = [...pendingDeleteIds.value, img.id] }}
+                              >✕</button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+
+                    {/* Превью новых фото */}
+                    {newEditPreviews.value.length > 0 && (
+                      <div class="vcf__photo-grid vd-edit-photo-section">
+                        {newEditPreviews.value.map((url, i) => (
+                          <div key={url} class="vcf__photo-item">
+                            <img src={url} alt="" class="vcf__photo-img" />
+                            <button
+                              type="button"
+                              class="vcf__photo-remove"
+                              aria-label="Убрать фото"
+                              onClick={() => removeEditFile(i)}
+                            >✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Загрузка новых фото */}
+                    <label for="ve-photos" class="vcf__file-label">
+                      <span aria-hidden="true">📁</span> Добавить фотографии
+                    </label>
+                    <input
+                      id="ve-photos"
+                      type="file"
+                      class="vcf__file-input"
+                      multiple
+                      accept="image/*"
+                      aria-label="Добавить фотографии площадки"
+                      onChange={handleEditFiles}
+                    />
+                  </div>
+                </form>
+              ),
+
+              footer: () => (
+                <>
+                  <button
+                    type="button" class="btn btn--secondary"
+                    onClick={closeEditDialog}
+                    disabled={editSubmitting.value}
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit" form="vd-edit-form" class="btn btn--primary"
+                    disabled={editSubmitting.value}
+                    aria-busy={editSubmitting.value ? 'true' : undefined}
+                  >
+                    {editSubmitting.value
+                      ? <><span class="spinner" aria-hidden="true" /><span class="sr-only">Сохранение</span></>
+                      : 'Сохранить'}
+                  </button>
+                </>
+              ),
+            }}
+          </UiDialog>
+
+          {/* ── Диалог подтверждения удаления ── */}
+          <UiDialog
+            open={deleteOpen.value}
+            title="Удалить площадку"
+            size="sm"
+            onClose={() => { deleteOpen.value = false }}
+          >
+            {{
+              default: () => (
+                <div class="vd-delete-body">
+                  {deleteError.value && (
+                    <UiAlert variant="error" title="Ошибка">{deleteError.value}</UiAlert>
+                  )}
+                  <p class="vd-delete-text">
+                    Вы уверены, что хотите удалить площадку{' '}
+                    <strong>«{v.name}»</strong>?{' '}
+                    Это действие невозможно отменить.
+                  </p>
+                </div>
+              ),
+
+              footer: () => (
+                <>
+                  <button
+                    type="button" class="btn btn--secondary"
+                    onClick={() => { deleteOpen.value = false }}
+                    disabled={deleteSubmitting.value}
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="button" class="vd-btn-danger"
+                    onClick={confirmDelete}
+                    disabled={deleteSubmitting.value}
+                    aria-busy={deleteSubmitting.value ? 'true' : undefined}
+                  >
+                    {deleteSubmitting.value
+                      ? <><span class="spinner" aria-hidden="true" /><span class="sr-only">Удаление</span></>
+                      : 'Удалить'}
+                  </button>
+                </>
+              ),
+            }}
+          </UiDialog>
+
         </article>
       )
     }

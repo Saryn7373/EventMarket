@@ -17,14 +17,23 @@ definePageMeta({ middleware: 'auth' })
 
 // ─── Цвета статусов ───────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
-  draft: { bg: '#f3f4f6', color: '#374151' },
-  planned: { bg: '#fef3c7', color: '#92400e' },
-  active: { bg: '#dbeafe', color: '#1e40af' },
-  ongoing: { bg: '#dcfce7', color: '#14532d' },
-  completed: { bg: '#dcfce7', color: '#14532d' },
-  cancelled: { bg: '#fee2e2', color: '#7f1d1d' },
+const STATUS_STYLES: Record<string, { backgroundColor: string; color: string }> = {
+  draft:     { backgroundColor: '#f3f4f6', color: '#374151' },
+  planned:   { backgroundColor: '#fef3c7', color: '#92400e' },
+  active:    { backgroundColor: '#dbeafe', color: '#1e40af' },
+  ongoing:   { backgroundColor: '#dcfce7', color: '#14532d' },
+  completed: { backgroundColor: '#dcfce7', color: '#14532d' },
+  cancelled: { backgroundColor: '#fee2e2', color: '#7f1d1d' },
 }
+
+const BOOKING_STATUS_STYLES: Record<string, { backgroundColor: string; color: string }> = {
+  pending:   { backgroundColor: '#fef3c7', color: '#92400e' },
+  confirmed: { backgroundColor: '#dbeafe', color: '#1e40af' },
+  cancelled: { backgroundColor: '#fee2e2', color: '#7f1d1d' },
+  completed: { backgroundColor: '#dcfce7', color: '#14532d' },
+}
+
+const HIRE_STATUS_STYLES = BOOKING_STATUS_STYLES
 
 // Допустимые переходы статусов (текущий включён)
 const ALLOWED_NEXT: Record<string, EventStatus[]> = {
@@ -358,7 +367,7 @@ export default defineComponent({
                         <RouterLink
                           to={`/venues/${v.slug}`}
                           class="ep-venue-card"
-                          aria-label={`Площадка ${v.name}, ${v.city}`}
+                          aria-label={`Площадка ${v.name}, ${v.city} — бронирование: ${v.booking_status_display}`}
                         >
                           <div class="ep-venue-card__icon" aria-hidden="true">🏛️</div>
                           <div class="ep-venue-card__body">
@@ -367,6 +376,13 @@ export default defineComponent({
                               {v.city}{v.address ? `, ${v.address}` : ''}
                             </span>
                           </div>
+                          <span
+                            class="ep-relation-status"
+                            style={BOOKING_STATUS_STYLES[v.booking_status]}
+                            aria-label={`Статус бронирования: ${v.booking_status_display}`}
+                          >
+                            {v.booking_status_display}
+                          </span>
                           <span class="ep-venue-card__arrow" aria-hidden="true">→</span>
                         </RouterLink>
                       </li>
@@ -434,7 +450,7 @@ export default defineComponent({
                           <RouterLink
                             to={`/specialists/${s.id}`}
                             class="ep-specialist-card"
-                            aria-label={`Специалист ${fullName}${s.specialty ? `, ${s.specialty}` : ''}`}
+                            aria-label={`Специалист ${fullName}${s.specialty ? `, ${s.specialty}` : ''} — найм: ${s.hire_status_display}`}
                           >
                             <div class="ep-specialist-card__avatar" aria-hidden="true">{initials}</div>
                             <div class="ep-specialist-card__body">
@@ -443,6 +459,13 @@ export default defineComponent({
                                 <span class="ep-specialist-card__specialty">{s.specialty}</span>
                               )}
                             </div>
+                            <span
+                              class="ep-relation-status"
+                              style={HIRE_STATUS_STYLES[s.hire_status]}
+                              aria-label={`Статус найма: ${s.hire_status_display}`}
+                            >
+                              {s.hire_status_display}
+                            </span>
                             <span class="ep-specialist-card__arrow" aria-hidden="true">→</span>
                           </RouterLink>
                         </li>

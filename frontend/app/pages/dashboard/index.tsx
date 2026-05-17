@@ -14,6 +14,7 @@ import {
 } from '~/utils/constants'
 import type {
   BookingListInfo,
+  BookingStatus,
   HireListInfo,
   Event,
   Venue,
@@ -56,6 +57,40 @@ const EMPTY_FORM = (): EventForm => ({
 
 const todayStr = () => new Date().toISOString().split('T')[0]
 
+// ─── Форма создания площадки ──────────────────────────────────────────────────
+
+interface VenueForm {
+  name: string
+  city: string
+  address: string
+  postal_code: string
+  capacity_min: number
+  capacity_max: number
+  area_sq_m: string
+  price_per_hour: string
+  price_per_day: string
+  min_booking_hours: number
+  short_description: string
+  description: string
+  cancellation_policy: string
+}
+
+const EMPTY_VENUE_FORM = (): VenueForm => ({
+  name: '',
+  city: '',
+  address: '',
+  postal_code: '',
+  capacity_min: 10,
+  capacity_max: 100,
+  area_sq_m: '',
+  price_per_hour: '',
+  price_per_day: '',
+  min_booking_hours: 2,
+  short_description: '',
+  description: '',
+  cancellation_policy: '',
+})
+
 // ─── Компонент страницы ───────────────────────────────────────────────────────
 
 export default defineComponent({
@@ -73,8 +108,16 @@ export default defineComponent({
     const totalCount = ref(0)
 
     // Данные владельца
-    const myVenues = ref<Venue[]>([])
+    const myVenues      = ref<Venue[]>([])
     const venueBookings = ref<BookingListInfo[]>([])
+
+    // ── Управление бронированиями (владелец) ──
+    const processingBookingId     = ref<string | null>(null)
+    const confirmBookingError     = ref('')
+    const cancelBookingOpen       = ref(false)
+    const cancelBookingId         = ref<string | null>(null)
+    const cancelBookingSubmitting = ref(false)
+    const cancelBookingError      = ref('')
 
     // Данные специалиста
     const specialistHires = ref<HireListInfo[]>([])
@@ -93,10 +136,20 @@ export default defineComponent({
     const submitting = ref(false)
     const submitError = ref('')
 
+    // ── Диалог создания площадки ──
+    const venueDialogOpen = ref(false)
+    const venueForm = reactive<VenueForm>(EMPTY_VENUE_FORM())
+    const venueFormErrors = ref<Record<string, string>>({})
+    const venueSubmitting = ref(false)
+    const venueSubmitError = ref('')
+    const venueFiles = ref<File[]>([])
+    const venuePreviewUrls = ref<string[]>([])
+
     // ── Computed ──
     const userRole = computed(() => userStore.user?.role ?? 'unknown')
     const userRoleDisplay = computed(() => USER_ROLES[userRole.value])
     const shortDescLen = computed(() => form.short_description.length)
+    const venueShortDescLen = computed(() => venueForm.short_description.length)
     const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 
     const createThemeOptions = computed(() =>
@@ -289,6 +342,153 @@ export default defineComponent({
       }
     }
 
+    // ── Диалог площадки: функции ──
+    const openVenueDialog = () => {
+      Object.assign(venueForm, EMPTY_VENUE_FORM())
+      venueFormErrors.value = {}
+      venueSubmitError.value = ''
+      venueFiles.value = []
+      venuePreviewUrls.value.forEach(u => URL.revokeObjectURL(u))
+      venuePreviewUrls.value = []
+      venueDialogOpen.value = true
+    }
+
+    const closeVenueDialog = () => {
+      venuePreviewUrls.value.forEach(u => URL.revokeObjectURL(u))
+      venuePreviewUrls.value = []
+      venueDialogOpen.value = false
+    }
+
+    const handleVenueFiles = (e: Event) => {
+      const input = e.target as HTMLInputElement
+      if (!input.files) return
+      venuePreviewUrls.value.forEach(u => URL.revokeObjectURL(u))
+      venueFiles.value = Array.from(input.files)
+      venuePreviewUrls.value = venueFiles.value.map(f => URL.createObjectURL(f))
+    }
+
+    const removeVenueFile = (index: number) => {
+      URL.revokeObjectURL(venuePreviewUrls.value[index])
+      venueFiles.value = venueFiles.value.filter((_, i) => i !== index)
+      venuePreviewUrls.value = venuePreviewUrls.value.filter((_, i) => i !== index)
+    }
+
+    const validateVenueForm = (): boolean => {
+      const errs: Record<string, string> = {}
+      if (!venueForm.name.trim()) errs.name = 'Название обязательно'
+      else if (venueForm.name.length > 200) errs.name = 'Не более 200 символов'
+      if (!venueForm.city.trim()) errs.city = 'Город обязателен'
+      if (!venueForm.address.trim()) errs.address = 'Адрес обязателен'
+      if (!venueForm.capacity_min || venueForm.capacity_min < 1) errs.capacity_min = 'Не менее 1'
+      if (!venueForm.capacity_max || venueForm.capacity_max < 1) errs.capacity_max = 'Не менее 1'
+      if (venueForm.capacity_min && venueForm.capacity_max && Number(venueForm.capacity_min) > Number(venueForm.capacity_max))
+        errs.capacity_min = 'Мин. не может быть больше макс.'
+      if (venueForm.short_description.length > 300) errs.short_description = 'Не более 300 символов'
+      venueFormErrors.value = errs
+      return Object.keys(errs).length === 0
+    }
+
+    const submitVenueForm = async () => {
+      if (!validateVenueForm()) return
+      venueSubmitting.value = true
+      venueSubmitError.value = ''
+      try {
+        const payload: Record<string, any> = {
+          name: venueForm.name.trim(),
+          city: venueForm.city.trim(),
+          address: venueForm.address.trim(),
+          capacity_min: Number(venueForm.capacity_min),
+          capacity_max: Number(venueForm.capacity_max),
+          min_booking_hours: Number(venueForm.min_booking_hours),
+        }
+        if (venueForm.postal_code.trim()) payload.postal_code = venueForm.postal_code.trim()
+        if (venueForm.area_sq_m !== '') payload.area_sq_m = Number(venueForm.area_sq_m)
+        if (venueForm.price_per_hour !== '') payload.price_per_hour = Number(venueForm.price_per_hour)
+        if (venueForm.price_per_day !== '') payload.price_per_day = Number(venueForm.price_per_day)
+        if (venueForm.short_description.trim()) payload.short_description = venueForm.short_description.trim()
+        if (venueForm.description.trim()) payload.description = venueForm.description.trim()
+        if (venueForm.cancellation_policy.trim()) payload.cancellation_policy = venueForm.cancellation_policy.trim()
+
+        const created = await $api.post<Venue>(API_ENDPOINTS.venues.list, payload)
+
+        for (let i = 0; i < venueFiles.value.length; i++) {
+          const fd = new FormData()
+          fd.append('image', venueFiles.value[i])
+          fd.append('order', String(i))
+          await $api.post(API_ENDPOINTS.venues.images(created.id), fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+          })
+        }
+
+        closeVenueDialog()
+        await loadDashboardData()
+      } catch (e: any) {
+        if (e.data && typeof e.data === 'object' && !e.data.detail) {
+          const serverErrs: Record<string, string> = {}
+          for (const [field, msgs] of Object.entries(e.data))
+            serverErrs[field] = Array.isArray(msgs) ? (msgs as string[])[0] : String(msgs)
+          venueFormErrors.value = { ...venueFormErrors.value, ...serverErrs }
+        } else {
+          venueSubmitError.value = e.data?.detail || e.message || 'Ошибка при создании площадки'
+        }
+      } finally {
+        venueSubmitting.value = false
+      }
+    }
+
+    // ── Изменение статуса бронирования ──
+    const applyBookingStatus = async (id: string, newStatus: 'confirmed' | 'cancelled') => {
+      const res = await $api.patch<{ status: string; status_display: string }>(
+        API_ENDPOINTS.bookings.status(id),
+        { status: newStatus },
+      )
+      const idx = venueBookings.value.findIndex(b => b.id === id)
+      if (idx >= 0) {
+        venueBookings.value[idx] = {
+          ...venueBookings.value[idx],
+          status: res.status as BookingStatus,
+          status_display: res.status_display,
+        }
+      }
+    }
+
+    const confirmBooking = async (id: string) => {
+      processingBookingId.value = id
+      confirmBookingError.value = ''
+      try {
+        await applyBookingStatus(id, 'confirmed')
+      } catch (e: any) {
+        confirmBookingError.value = e.data?.detail || e.message || 'Ошибка при подтверждении'
+      } finally {
+        processingBookingId.value = null
+      }
+    }
+
+    const openCancelBooking = (id: string) => {
+      cancelBookingId.value  = id
+      cancelBookingError.value = ''
+      cancelBookingOpen.value = true
+    }
+
+    const closeCancelBooking = () => {
+      cancelBookingOpen.value = false
+      cancelBookingId.value   = null
+    }
+
+    const submitCancelBooking = async () => {
+      if (!cancelBookingId.value) return
+      cancelBookingSubmitting.value = true
+      cancelBookingError.value      = ''
+      try {
+        await applyBookingStatus(cancelBookingId.value, 'cancelled')
+        closeCancelBooking()
+      } catch (e: any) {
+        cancelBookingError.value = e.data?.detail || e.message || 'Ошибка при отмене'
+      } finally {
+        cancelBookingSubmitting.value = false
+      }
+    }
+
     // ── Хелперы рендера ──
     const renderStatusBadge = (label: string, color: string) => (
       <span class={`badge badge--${color}`}>
@@ -465,10 +665,18 @@ export default defineComponent({
         <section class="dashboard-section" aria-labelledby="owner-venues-title">
           <div class="section-header">
             <h2 id="owner-venues-title" class="section-title">Мои площадки</h2>
+            <UiButton variant="primary" onClick={openVenueDialog}>
+              <span aria-hidden="true">+</span> Добавить площадку
+            </UiButton>
           </div>
 
           {myVenues.value.length === 0
-            ? renderEmpty('🏛️', 'У вас пока нет площадок', 'Зарегистрируйте свою первую площадку, чтобы принимать бронирования')
+            ? renderEmpty(
+                '🏛️',
+                'У вас пока нет площадок',
+                'Зарегистрируйте свою первую площадку, чтобы принимать бронирования',
+                { label: '+ Добавить площадку', onClick: openVenueDialog },
+              )
             : (
               <ul class="venue-grid" aria-label="Список ваших площадок">
                 {myVenues.value.map((venue) => {
@@ -505,6 +713,12 @@ export default defineComponent({
             <h2 id="owner-bookings-title" class="section-title">Аренды моих площадок</h2>
           </div>
 
+          {confirmBookingError.value && (
+            <div class="booking-alert">
+              <UiAlert variant="error" title="Ошибка">{confirmBookingError.value}</UiAlert>
+            </div>
+          )}
+
           {venueBookings.value.length === 0
             ? <div class="empty-state"><p>Пока никто не бронировал ваши площадки</p></div>
             : (
@@ -518,27 +732,339 @@ export default defineComponent({
                       <th scope="col">Период</th>
                       <th scope="col">Сумма</th>
                       <th scope="col">Статус</th>
+                      <th scope="col">Действия</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {venueBookings.value.map((b) => (
-                      <tr key={b.id}>
-                        <td><strong>{b.venue_name}</strong><div class="muted text-sm">{b.venue_city}</div></td>
-                        <td>{b.event_title}</td>
-                        <td>
-                          <div>{formatDateTime(b.start_datetime)}</div>
-                          <div class="muted text-sm">до {formatDateTime(b.end_datetime)}</div>
-                        </td>
-                        <td class="text-semibold">{formatCurrency(b.total_price)}</td>
-                        <td>{renderStatusBadge(b.status_display, BOOKING_STATUS_COLORS[b.status] ?? 'gray')}</td>
-                      </tr>
-                    ))}
+                    {venueBookings.value.map((b) => {
+                      const isProcessing = processingBookingId.value === b.id
+                      return (
+                        <tr key={b.id}>
+                          <td><strong>{b.venue_name}</strong><div class="muted text-sm">{b.venue_city}</div></td>
+                          <td>{b.event_title}</td>
+                          <td>
+                            <div>{formatDateTime(b.start_datetime)}</div>
+                            <div class="muted text-sm">до {formatDateTime(b.end_datetime)}</div>
+                          </td>
+                          <td class="text-semibold">{formatCurrency(b.total_price)}</td>
+                          <td>{renderStatusBadge(b.status_display, BOOKING_STATUS_COLORS[b.status] ?? 'gray')}</td>
+                          <td class="booking-actions-cell">
+                            {b.status === 'pending' && (
+                              <div class="booking-actions">
+                                <button
+                                  type="button"
+                                  class="btn btn--primary btn--sm"
+                                  onClick={() => confirmBooking(b.id)}
+                                  disabled={isProcessing}
+                                  aria-busy={isProcessing ? 'true' : undefined}
+                                >
+                                  {isProcessing
+                                    ? <span class="spinner" aria-hidden="true" />
+                                    : 'Подтвердить'}
+                                </button>
+                                <button
+                                  type="button"
+                                  class="btn btn--danger btn--sm"
+                                  onClick={() => openCancelBooking(b.id)}
+                                  disabled={isProcessing}
+                                >
+                                  Отменить
+                                </button>
+                              </div>
+                            )}
+                            {b.status === 'confirmed' && (
+                              <button
+                                type="button"
+                                class="btn btn--danger btn--sm"
+                                onClick={() => openCancelBooking(b.id)}
+                              >
+                                Отменить
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
         </section>
+
+        {/* ── Диалог отмены бронирования ── */}
+        <UiDialog
+          open={cancelBookingOpen.value}
+          title="Отменить бронирование?"
+          size="sm"
+          onClose={closeCancelBooking}
+        >
+          {{
+            default: () => (
+              <div class="ep-cancel-confirm">
+                <p class="ep-cancel-confirm__text">
+                  Вы уверены, что хотите отменить это бронирование?
+                  Арендатор получит уведомление об отмене.
+                </p>
+                {cancelBookingError.value && (
+                  <div class="ecf__alert">
+                    <UiAlert variant="error" title="Ошибка">{cancelBookingError.value}</UiAlert>
+                  </div>
+                )}
+              </div>
+            ),
+            footer: () => (
+              <>
+                <button
+                  type="button"
+                  class="btn btn--secondary"
+                  onClick={closeCancelBooking}
+                  disabled={cancelBookingSubmitting.value}
+                >
+                  Не отменять
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--danger"
+                  onClick={submitCancelBooking}
+                  disabled={cancelBookingSubmitting.value}
+                  aria-busy={cancelBookingSubmitting.value ? 'true' : undefined}
+                >
+                  {cancelBookingSubmitting.value
+                    ? <><span class="spinner" aria-hidden="true" /><span class="sr-only">Отмена</span></>
+                    : 'Да, отменить'}
+                </button>
+              </>
+            ),
+          }}
+        </UiDialog>
       </>
+    )
+
+    // ── Диалог создания площадки ──
+    const renderVenueDialog = () => (
+      <UiDialog
+        open={venueDialogOpen.value}
+        title="Новая площадка"
+        size="lg"
+        onClose={closeVenueDialog}
+      >
+        {{
+          default: () => (
+            <form
+              id="dash-venue-form"
+              class="vcf"
+              onSubmit={(e) => { e.preventDefault(); submitVenueForm() }}
+              novalidate
+              aria-label="Форма создания площадки"
+            >
+              {venueSubmitError.value && (
+                <div class="vcf__alert">
+                  <UiAlert variant="error" title="Ошибка">{venueSubmitError.value}</UiAlert>
+                </div>
+              )}
+
+              <UiInput
+                id="dash-vcf-name"
+                label="Название площадки"
+                modelValue={venueForm.name}
+                onUpdate:modelValue={(v: string) => { venueForm.name = v }}
+                placeholder="Например: Лофт на Покровке"
+                required
+                error={venueFormErrors.value.name}
+              />
+
+              <div class="vcf__row-3">
+                <UiInput
+                  id="dash-vcf-city"
+                  label="Город"
+                  modelValue={venueForm.city}
+                  onUpdate:modelValue={(v: string) => { venueForm.city = v }}
+                  placeholder="Москва"
+                  required
+                  error={venueFormErrors.value.city}
+                />
+                <UiInput
+                  id="dash-vcf-address"
+                  label="Адрес"
+                  modelValue={venueForm.address}
+                  onUpdate:modelValue={(v: string) => { venueForm.address = v }}
+                  placeholder="ул. Примерная, 1"
+                  required
+                  error={venueFormErrors.value.address}
+                />
+                <UiInput
+                  id="dash-vcf-postal"
+                  label="Почтовый индекс"
+                  modelValue={venueForm.postal_code}
+                  onUpdate:modelValue={(v: string) => { venueForm.postal_code = v }}
+                  placeholder="101000"
+                  error={venueFormErrors.value.postal_code}
+                />
+              </div>
+
+              <div class="vcf__row-3">
+                <UiInput
+                  id="dash-vcf-cap-min"
+                  label="Мин. вместимость"
+                  type="number"
+                  modelValue={venueForm.capacity_min}
+                  onUpdate:modelValue={(v: string) => { venueForm.capacity_min = Number(v) }}
+                  placeholder="10"
+                  required
+                  error={venueFormErrors.value.capacity_min}
+                />
+                <UiInput
+                  id="dash-vcf-cap-max"
+                  label="Макс. вместимость"
+                  type="number"
+                  modelValue={venueForm.capacity_max}
+                  onUpdate:modelValue={(v: string) => { venueForm.capacity_max = Number(v) }}
+                  placeholder="100"
+                  required
+                  error={venueFormErrors.value.capacity_max}
+                />
+                <UiInput
+                  id="dash-vcf-area"
+                  label="Площадь, м²"
+                  type="number"
+                  modelValue={venueForm.area_sq_m}
+                  onUpdate:modelValue={(v: string) => { venueForm.area_sq_m = v }}
+                  placeholder="200"
+                  error={venueFormErrors.value.area_sq_m}
+                />
+              </div>
+
+              <div class="vcf__row-3">
+                <UiInput
+                  id="dash-vcf-price-hour"
+                  label="Цена за час, ₽"
+                  type="number"
+                  modelValue={venueForm.price_per_hour}
+                  onUpdate:modelValue={(v: string) => { venueForm.price_per_hour = v }}
+                  placeholder="2000"
+                  error={venueFormErrors.value.price_per_hour}
+                />
+                <UiInput
+                  id="dash-vcf-price-day"
+                  label="Цена за сутки, ₽"
+                  type="number"
+                  modelValue={venueForm.price_per_day}
+                  onUpdate:modelValue={(v: string) => { venueForm.price_per_day = v }}
+                  placeholder="15000"
+                  error={venueFormErrors.value.price_per_day}
+                />
+                <UiInput
+                  id="dash-vcf-min-hours"
+                  label="Мин. бронирование, ч"
+                  type="number"
+                  modelValue={venueForm.min_booking_hours}
+                  onUpdate:modelValue={(v: string) => { venueForm.min_booking_hours = Number(v) }}
+                  placeholder="2"
+                  required
+                  error={venueFormErrors.value.min_booking_hours}
+                />
+              </div>
+
+              <div class="input-wrapper">
+                <label class="input-label" for="dash-vcf-short">
+                  Короткое описание
+                  <span class="ecf__char-count" aria-live="polite">{venueShortDescLen.value}/300</span>
+                </label>
+                <textarea
+                  id="dash-vcf-short"
+                  class={['input ecf__textarea ecf__textarea--sm', venueFormErrors.value.short_description && 'input--error']}
+                  value={venueForm.short_description}
+                  maxlength={300}
+                  placeholder="Краткое описание для карточки (до 300 символов)"
+                  onInput={(e) => { venueForm.short_description = (e.target as HTMLTextAreaElement).value }}
+                />
+                {venueFormErrors.value.short_description && (
+                  <p class="input-error" role="alert">{venueFormErrors.value.short_description}</p>
+                )}
+              </div>
+
+              <div class="input-wrapper">
+                <label class="input-label" for="dash-vcf-desc">Подробное описание</label>
+                <textarea
+                  id="dash-vcf-desc"
+                  class="input ecf__textarea"
+                  value={venueForm.description}
+                  placeholder="Подробная информация о площадке, особенности, оборудование..."
+                  onInput={(e) => { venueForm.description = (e.target as HTMLTextAreaElement).value }}
+                />
+              </div>
+
+              <div class="input-wrapper">
+                <label class="input-label" for="dash-vcf-cancel">Политика отмены</label>
+                <textarea
+                  id="dash-vcf-cancel"
+                  class="input ecf__textarea ecf__textarea--sm"
+                  value={venueForm.cancellation_policy}
+                  placeholder="Например: бесплатная отмена за 48 часов до начала"
+                  onInput={(e) => { venueForm.cancellation_policy = (e.target as HTMLTextAreaElement).value }}
+                />
+              </div>
+
+              <div class="input-wrapper">
+                <span class="input-label">Фотографии</span>
+                <label for="dash-vcf-photos" class="vcf__file-label">
+                  <span aria-hidden="true">📁</span> Выбрать фотографии
+                </label>
+                <input
+                  id="dash-vcf-photos"
+                  type="file"
+                  class="vcf__file-input"
+                  multiple
+                  accept="image/*"
+                  aria-label="Фотографии площадки"
+                  onChange={handleVenueFiles}
+                />
+                {venuePreviewUrls.value.length > 0 && (
+                  <div class="vcf__photo-grid" role="list" aria-label="Выбранные фотографии">
+                    {venuePreviewUrls.value.map((url, i) => (
+                      <div key={url} class="vcf__photo-item" role="listitem">
+                        <img src={url} alt={`Фото ${i + 1}`} class="vcf__photo-img" />
+                        <button
+                          type="button"
+                          class="vcf__photo-remove"
+                          aria-label={`Удалить фото ${i + 1}`}
+                          onClick={() => removeVenueFile(i)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </form>
+          ),
+
+          footer: () => (
+            <>
+              <button
+                type="button"
+                class="btn btn--secondary"
+                onClick={closeVenueDialog}
+                disabled={venueSubmitting.value}
+              >
+                Отмена
+              </button>
+              <button
+                type="submit"
+                form="dash-venue-form"
+                class="btn btn--primary"
+                disabled={venueSubmitting.value}
+                aria-busy={venueSubmitting.value ? 'true' : undefined}
+              >
+                {venueSubmitting.value
+                  ? <><span class="spinner" aria-hidden="true" /> <span class="sr-only">Создание</span></>
+                  : 'Создать площадку'}
+              </button>
+            </>
+          ),
+        }}
+      </UiDialog>
     )
 
     // ── Вид Специалиста ──
@@ -637,6 +1163,9 @@ export default defineComponent({
               </>
             )}
           </div>
+
+          {/* ── Диалог создания площадки (только для владельцев) ── */}
+          {userRole.value === 'owner' && renderVenueDialog()}
 
           {/* ── Диалог создания мероприятия (только для арендаторов) ── */}
           {userRole.value === 'renter' && (

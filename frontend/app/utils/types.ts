@@ -74,6 +74,7 @@ export interface Venue extends BaseEntity {
   is_verified: boolean
   main_photo: string | null
   images: VenueImage[]
+  has_active_bookings: boolean
 }
 
 export type VenueStatus = 'draft' | 'published' | 'archived' | 'moderation'
@@ -146,6 +147,9 @@ export interface VenueShortInfo {
   name: string
   city: string
   address: string
+  booking_id: string
+  booking_status: BookingStatus
+  booking_status_display: string
 }
 
 export interface SpecialistInfo {
@@ -154,6 +158,9 @@ export interface SpecialistInfo {
   first_name: string
   last_name: string
   specialty: string
+  hire_id: string
+  hire_status: HireStatus
+  hire_status_display: string
 }
 
 export interface EventFilters {

@@ -311,6 +311,20 @@
   color: var(--color-primary-hover);
 }
 
+/* ── Действия бронирований (владелец) ── */
+.booking-alert {
+  margin-bottom: var(--spacing-md);
+}
+
+.booking-actions-cell {
+  white-space: nowrap;
+}
+
+.booking-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
 /* Таблицы */
 .table-wrapper {
   overflow-x: auto;
@@ -502,6 +516,109 @@
 .pagination-info {
   font-size: 0.875rem;
   color: var(--color-gray-700);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Venue Create Form (vcf)
+   ────────────────────────────────────────────────────────────── */
+
+.vcf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.vcf__alert {
+  margin-bottom: var(--spacing-xs);
+}
+
+.vcf__row-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--spacing-md);
+}
+
+/* Скрытый нативный input[type=file] */
+.vcf__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Стилизованная метка для загрузки файлов */
+.vcf__file-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border: 2px dashed var(--color-gray-300);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-gray-700);
+  background-color: var(--color-gray-50);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  margin-top: var(--spacing-xs);
+}
+
+.vcf__file-label:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light, #eff6ff);
+  color: var(--color-primary);
+}
+
+/* Сетка превью фото */
+.vcf__photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.vcf__photo-item {
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  aspect-ratio: 1 / 1;
+  background-color: var(--color-gray-100);
+}
+
+.vcf__photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.vcf__photo-remove {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: background-color var(--transition-fast);
+}
+
+.vcf__photo-remove:hover {
+  background-color: var(--color-danger);
+}
+
+@media (max-width: 40rem) {
+  .vcf__row-3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── Сетка мероприятий (арендатор) ─── */

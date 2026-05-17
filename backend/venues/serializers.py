@@ -25,13 +25,20 @@ class VenueListSerializer(serializers.ModelSerializer):
         ]
 
     def get_main_photo(self, obj):
-        return obj.main_photo
+        url = obj.main_photo
+        if not url:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        return url
 
 
 class VenueDetailSerializer(serializers.ModelSerializer):
     """Полное представление для detail/create/update"""
-    owner_email = serializers.EmailField(source='owner.user.email', read_only=True)
-    images      = VenueImageSerializer(many=True, read_only=True)
+    owner_email         = serializers.EmailField(source='owner.user.email', read_only=True)
+    images              = VenueImageSerializer(many=True, read_only=True)
+    has_active_bookings = serializers.SerializerMethodField()
 
     class Meta:
         model  = Venue
@@ -46,8 +53,12 @@ class VenueDetailSerializer(serializers.ModelSerializer):
             'status', 'is_verified',
             'owner_email', 'images',
             'created_at', 'updated_at',
+            'has_active_bookings',
         ]
         read_only_fields = ['id', 'slug', 'is_verified', 'created_at', 'updated_at', 'owner_email']
+
+    def get_has_active_bookings(self, obj):
+        return obj.bookings.filter(status__in=['pending', 'confirmed']).exists()
 
 
 class VenueWriteSerializer(serializers.ModelSerializer):
@@ -62,7 +73,6 @@ class VenueWriteSerializer(serializers.ModelSerializer):
             'capacity_min', 'capacity_max', 'area_sq_m',
             'price_per_hour', 'price_per_day',
             'min_booking_hours', 'cancellation_policy',
-            'status',
         ]
 
     def validate(self, data):
@@ -76,5 +86,5 @@ class VenueWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         request = self.context['request']
-        owner   = request.user.owner  # Owner профиль
-        return Venue.objects.create(owner=owner, **validated_data)
+        owner   = request.user.owner
+        return Venue.objects.create(owner=owner, status='published', **validated_data)

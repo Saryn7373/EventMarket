@@ -8,22 +8,6 @@ class _RenterShortSerializer(serializers.Serializer):
     last_name = serializers.CharField(source='user.last_name')
 
 
-class _VenueShortSerializer(serializers.Serializer):
-    id      = serializers.UUIDField()
-    slug    = serializers.SlugField()
-    name    = serializers.CharField()
-    city    = serializers.CharField()
-    address = serializers.CharField()
-
-
-class _SpecialistShortSerializer(serializers.Serializer):
-    id         = serializers.UUIDField(source='user.id')
-    email      = serializers.EmailField(source='user.email')
-    first_name = serializers.CharField(source='user.first_name')
-    last_name  = serializers.CharField(source='user.last_name')
-    specialty  = serializers.CharField()
-
-
 class EventListSerializer(serializers.ModelSerializer):
     """Короткое представление для списка"""
     renter_info    = _RenterShortSerializer(source='renter', read_only=True)
@@ -44,14 +28,46 @@ class EventListSerializer(serializers.ModelSerializer):
 
 class EventDetailSerializer(serializers.ModelSerializer):
     """Полное представление для detail/create/update"""
-    renter_info = _RenterShortSerializer(source='renter', read_only=True)
-    venues = _VenueShortSerializer(many=True, read_only=True)
-    specialists = _SpecialistShortSerializer(many=True, read_only=True)
+    renter_info    = _RenterShortSerializer(source='renter', read_only=True)
+    venues         = serializers.SerializerMethodField()
+    specialists    = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    theme_display = serializers.CharField(source='get_theme_display', read_only=True)
+    theme_display  = serializers.CharField(source='get_theme_display', read_only=True)
     duration_hours = serializers.FloatField(read_only=True)
-    is_upcoming = serializers.BooleanField(read_only=True)
-    is_today = serializers.BooleanField(read_only=True)
+    is_upcoming    = serializers.BooleanField(read_only=True)
+    is_today       = serializers.BooleanField(read_only=True)
+
+    def get_venues(self, obj):
+        result = []
+        for booking in obj.bookings.select_related('venue').order_by('created_at'):
+            v = booking.venue
+            result.append({
+                'id':                     str(v.id),
+                'slug':                   v.slug,
+                'name':                   v.name,
+                'city':                   v.city,
+                'address':                v.address,
+                'booking_id':             str(booking.id),
+                'booking_status':         booking.status,
+                'booking_status_display': booking.get_status_display(),
+            })
+        return result
+
+    def get_specialists(self, obj):
+        result = []
+        for hire in obj.hires.select_related('specialist__user').order_by('created_at'):
+            s = hire.specialist
+            result.append({
+                'id':                    str(s.user.id),
+                'email':                 s.user.email,
+                'first_name':            s.user.first_name,
+                'last_name':             s.user.last_name,
+                'specialty':             s.specialty,
+                'hire_id':               str(hire.id),
+                'hire_status':           hire.status,
+                'hire_status_display':   hire.get_status_display(),
+            })
+        return result
 
     class Meta:
         model = Event
