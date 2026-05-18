@@ -2,7 +2,7 @@ import { defineComponent, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useApi } from '~/composables/useApi'
 import { API_ENDPOINTS } from '~/utils/constants'
-import type { Venue, SpecialistPublic } from '~/utils/types'
+import type { Venue, SpecialistPublic, TopOrganizer } from '~/utils/types'
 
 definePageMeta({ middleware: 'home' })
 
@@ -13,6 +13,7 @@ export default defineComponent({
 
     const venues      = ref<Venue[]>([])
     const specialists = ref<SpecialistPublic[]>([])
+    const organizers  = ref<TopOrganizer[]>([])
 
     const formatCurrency = (amount: number | null): string => {
       if (!amount) return 'Не указана'
@@ -33,13 +34,24 @@ export default defineComponent({
       return '★'.repeat(filled) + '☆'.repeat(5 - filled)
     }
 
+    const pluralEvents = (n: number) => {
+      const mod10 = n % 10
+      const mod100 = n % 100
+      if (mod100 >= 11 && mod100 <= 19) return `${n} мероприятий`
+      if (mod10 === 1) return `${n} мероприятие`
+      if (mod10 >= 2 && mod10 <= 4) return `${n} мероприятия`
+      return `${n} мероприятий`
+    }
+
     onMounted(async () => {
-      const [venuesRes, specialistsRes] = await Promise.allSettled([
+      const [venuesRes, specialistsRes, organizersRes] = await Promise.allSettled([
         $api.get<{ results: Venue[] }>(API_ENDPOINTS.venues.list, { params: { page_size: 3 } }),
         $api.get<{ results: SpecialistPublic[] }>(API_ENDPOINTS.specialists.list, { params: { page_size: 3, ordering: '-rating' } }),
+        $api.get<TopOrganizer[]>(API_ENDPOINTS.auth.topOrganizers),
       ])
       if (venuesRes.status === 'fulfilled')      venues.value      = venuesRes.value.results
       if (specialistsRes.status === 'fulfilled') specialists.value = specialistsRes.value.results
+      if (organizersRes.status === 'fulfilled')  organizers.value  = organizersRes.value
     })
 
     return () => (
@@ -230,6 +242,45 @@ export default defineComponent({
                               <span class="specialist-card__rating-value">{formatRating(spec.rating)}</span>
                             </div>
                           )}
+                        </div>
+                      </article>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          </section>
+        )}
+        {/* ── Топ организаторов ── */}
+        {organizers.value.length > 0 && (
+          <section class="home-section" aria-labelledby="home-organizers-title">
+            <div class="container">
+              <div class="home-section__header">
+                <h2 id="home-organizers-title" class="home-section__title">Самые активные организаторы</h2>
+              </div>
+              <ul class="home-organizers-grid" aria-label="Активные организаторы">
+                {organizers.value.map((org, i) => {
+                  const fullName = `${org.first_name} ${org.last_name}`.trim() || 'Организатор'
+                  const initials = `${org.first_name?.[0] ?? ''}${org.last_name?.[0] ?? ''}`.toUpperCase() || '?'
+                  return (
+                    <li key={org.id}>
+                      <article class="organizer-card card">
+                        <div class="organizer-card__rank" aria-hidden="true">#{i + 1}</div>
+                        <div class="organizer-card__avatar">
+                          {org.avatar
+                            ? <img src={org.avatar} alt="" class="organizer-card__avatar-img" />
+                            : <span class="organizer-card__avatar-initials" aria-hidden="true">{initials}</span>
+                          }
+                        </div>
+                        <div class="organizer-card__body">
+                          <p class="organizer-card__name">{fullName}</p>
+                          <p class="organizer-card__count">
+                            <span class="organizer-card__count-num">{org.completed_events}</span>
+                            {' '}проведённых{' '}
+                            {org.completed_events === 1 ? 'мероприятие'
+                              : (org.completed_events >= 2 && org.completed_events <= 4) ? 'мероприятия'
+                              : 'мероприятий'}
+                          </p>
                         </div>
                       </article>
                     </li>

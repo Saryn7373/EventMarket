@@ -388,6 +388,14 @@ export interface ApiValidationError {
 // Публичные специалисты
 // ============================================
 
+export interface TopOrganizer {
+  id: string
+  first_name: string
+  last_name: string
+  avatar: string | null
+  completed_events: number
+}
+
 export interface SpecialistPublic {
   id: string
   first_name: string
