@@ -37,6 +37,12 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  function updateAvatar(avatar: string | null) {
+    if (state.user) {
+      state.user.avatar = avatar
+    }
+  }
+
   return {
     user,
     isAuthenticated,
@@ -45,5 +51,6 @@ export const useUserStore = defineStore('user', () => {
     setUser,
     clearUser,
     updateName,
+    updateAvatar,
   }
 })

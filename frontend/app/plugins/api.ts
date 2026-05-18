@@ -6,6 +6,8 @@ export interface ApiClient {
   get: <T>(url: string, config?: AxiosRequestConfig) => Promise<T>
   post: <T>(url: string, data?: any, config?: AxiosRequestConfig) => Promise<T>
   patch: <T>(url: string, data?: any, config?: AxiosRequestConfig) => Promise<T>
+  /** Отправляет FormData как multipart/form-data (Content-Type ставится браузером с boundary) */
+  patchForm: <T>(url: string, data: FormData, config?: AxiosRequestConfig) => Promise<T>
   put: <T>(url: string, data?: any, config?: AxiosRequestConfig) => Promise<T>
   delete: <T>(url: string, config?: AxiosRequestConfig) => Promise<T>
   setAccessToken: (token: string) => void
@@ -84,6 +86,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
     patch: <T>(url: string, data?: any, config?: AxiosRequestConfig) =>
       handleResponse<T>(instance.patch(url, data, withAuth(config))),
+
+    patchForm: <T>(url: string, data: FormData, config?: AxiosRequestConfig) =>
+      handleResponse<T>(instance.patchForm(url, data, withAuth(config))),
 
     put: <T>(url: string, data?: any, config?: AxiosRequestConfig) =>
       handleResponse<T>(instance.put(url, data, withAuth(config))),
