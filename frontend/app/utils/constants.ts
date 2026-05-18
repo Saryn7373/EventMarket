@@ -149,6 +149,7 @@ export const API_ENDPOINTS = {
     refresh: '/auth/token/refresh/',
     me: '/auth/me/',
     changePassword: '/auth/change-password/',
+    topOrganizers: '/auth/top-organizers/',
   },
   // Venues
   venues: {

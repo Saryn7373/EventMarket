@@ -1,3 +1,4 @@
+from django.db.models import Count, Q
 from rest_framework import generics, filters, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -9,7 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from EventMarket.pagination import StandardPagination
 from .filters import SpecialistFilter
-from .models import Specialist
+from .models import Specialist, Renter
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
@@ -85,6 +86,36 @@ class ChangePasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"detail": "Пароль успешно изменён."})
+
+
+class TopOrganizersView(APIView):
+    """GET /api/auth/top-organizers/ — топ-3 арендатора по числу проведённых мероприятий"""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        top = (
+            Renter.objects
+            .annotate(completed_count=Count('events', filter=Q(events__status='completed')))
+            .filter(completed_count__gt=0)
+            .order_by('-completed_count')
+            .select_related('user', 'user__avatar')
+            [:3]
+        )
+        result = []
+        for renter in top:
+            avatar_url = None
+            try:
+                avatar_url = renter.user.avatar.image.url
+            except Exception:
+                pass
+            result.append({
+                'id': str(renter.user.id),
+                'first_name': renter.user.first_name,
+                'last_name': renter.user.last_name,
+                'avatar': avatar_url,
+                'completed_events': renter.completed_count,
+            })
+        return Response(result)
 
 
 class SpecialistListView(generics.ListAPIView):
