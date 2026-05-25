@@ -705,3 +705,201 @@
     font-size: 1.375rem;
   }
 }
+
+/* ── Печать (A4) ── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+
+  /* Скрываем интерактивные и медиа-элементы */
+  .vd-gallery,
+  .vd-gallery--empty,
+  .vd-breadcrumb,
+  .vd-book-btn,
+  .vd-book-role-hint,
+  .vd-owner-actions,
+  dialog,
+  [role="dialog"] {
+    display: none !important;
+  }
+
+  /* Убираем фоны и тени страницы */
+  body,
+  .vd-page {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Двухколоночная компоновка под A4 */
+  .vd-layout {
+    display: grid;
+    grid-template-columns: 1fr 14rem;
+    gap: 12pt;
+    padding-bottom: 0;
+    align-items: start;
+  }
+
+  /* Заголовок */
+  .vd-title {
+    font-size: 16pt;
+    line-height: 1.2;
+    color: #000;
+  }
+
+  .vd-title-row {
+    margin-bottom: 4pt;
+  }
+
+  /* Значок верификации */
+  .vd-verified {
+    font-size: 8pt;
+    padding: 2pt 6pt;
+    background: #e6f4ea;
+    color: #1a7f37;
+    border-radius: 4pt;
+  }
+
+  /* Адрес */
+  .vd-location {
+    font-size: 9pt;
+    margin-bottom: 8pt;
+    color: #444;
+  }
+
+  /* Краткое описание */
+  .vd-short-desc {
+    font-size: 9pt;
+    line-height: 1.4;
+    margin-bottom: 8pt;
+    padding-bottom: 8pt;
+    border-bottom: 0.5pt solid #ccc;
+    color: #333;
+  }
+
+  /* Секции */
+  .vd-section {
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+  }
+
+  .vd-section__title {
+    font-size: 10pt;
+    font-weight: 700;
+    margin-bottom: 6pt;
+    color: #000;
+    border-bottom: 0.5pt solid #ccc;
+    padding-bottom: 2pt;
+  }
+
+  /* Характеристики — горизонтально в 2 колонки */
+  .vd-specs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5pt;
+    margin: 0;
+  }
+
+  .vd-specs__item {
+    background: none;
+    border: 0.5pt solid #ccc;
+    border-radius: 3pt;
+    padding: 4pt 6pt;
+  }
+
+  .vd-specs__item dt {
+    font-size: 7pt;
+    color: #666;
+    margin-bottom: 1pt;
+  }
+
+  .vd-specs__item dd {
+    font-size: 9pt;
+    font-weight: 600;
+    margin: 0;
+    color: #000;
+  }
+
+  /* Ссылки на карту — только текст */
+  .vd-specs__item dd a {
+    color: #000;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 8pt;
+  }
+
+  .vd-specs__item dd a::after {
+    content: " (" attr(href) ")";
+    font-size: 7pt;
+    color: #666;
+    word-break: break-all;
+  }
+
+  /* Описание */
+  .vd-description {
+    font-size: 9pt;
+    line-height: 1.45;
+    color: #222;
+  }
+
+  .vd-description p {
+    margin-bottom: 4pt;
+  }
+
+  /* Политика отмены */
+  .vd-cancel-policy {
+    font-size: 9pt;
+    background: none;
+    border-left: 2pt solid #f59e0b;
+    padding: 4pt 8pt;
+    border-radius: 0;
+    color: #333;
+    line-height: 1.4;
+  }
+
+  /* Сайдбар */
+  .vd-sidebar__card {
+    position: static;
+    border: 0.5pt solid #ccc;
+    border-radius: 4pt;
+    padding: 8pt;
+    box-shadow: none;
+  }
+
+  .vd-sidebar__title {
+    font-size: 10pt;
+    margin-bottom: 6pt;
+    color: #000;
+  }
+
+  .vd-price-list {
+    gap: 4pt;
+    margin-bottom: 6pt;
+    padding-bottom: 6pt;
+    border-bottom: 0.5pt solid #ddd;
+  }
+
+  .vd-price-list__item dt {
+    font-size: 8pt;
+    color: #555;
+  }
+
+  .vd-price-list__value {
+    font-size: 11pt;
+    color: #000;
+    font-weight: 700;
+  }
+
+  .vd-price-list__value--na {
+    font-size: 9pt;
+    color: #666;
+    font-weight: 400;
+  }
+
+  .vd-sidebar__hint {
+    font-size: 8pt;
+    color: #555;
+    margin-bottom: 0;
+  }
+}
