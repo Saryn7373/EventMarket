@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, onUnmounted } from 'vue'
+import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useUserStore } from '~/stores/user'
 import { useApi } from '~/composables/useApi'
 import { API_ENDPOINTS, USER_ROLES } from '~/utils/constants'
@@ -31,10 +31,6 @@ export default defineComponent({
     const newPassword = ref('')
     const confirmPassword = ref('')
 
-    // Состояния аватара
-    const avatarFile = ref<File | null>(null)
-    const avatarPreview = ref<string | null>(null)
-
     // Состояния
     const loading = ref(false)
     const saving = ref(false)
@@ -60,22 +56,6 @@ export default defineComponent({
       validationErrors.value = {}
     }
 
-    const clearAvatarState = () => {
-      if (avatarPreview.value) {
-        URL.revokeObjectURL(avatarPreview.value)
-        avatarPreview.value = null
-      }
-      avatarFile.value = null
-    }
-
-    const handleAvatarChange = (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
-      clearAvatarState()
-      avatarFile.value = file
-      avatarPreview.value = URL.createObjectURL(file)
-    }
-
     const enableEditing = () => {
       isEditing.value = true
       firstName.value = userStore.user?.first_name || ''
@@ -85,7 +65,6 @@ export default defineComponent({
 
     const cancelEditing = () => {
       isEditing.value = false
-      clearAvatarState()
       clearMessages()
     }
 
@@ -95,25 +74,15 @@ export default defineComponent({
       validationErrors.value = {}
 
       try {
-        let updatedUser: User
+        await $api.patch<User>(API_ENDPOINTS.auth.me, {
+          first_name: firstName.value,
+          last_name: lastName.value,
+        })
 
-        if (avatarFile.value) {
-          const fd = new FormData()
-          fd.append('first_name', firstName.value)
-          fd.append('last_name', lastName.value)
-          fd.append('avatar', avatarFile.value)
-          updatedUser = await $api.patchForm<User>(API_ENDPOINTS.auth.me, fd)
-        } else {
-          updatedUser = await $api.patch<User>(API_ENDPOINTS.auth.me, {
-            first_name: firstName.value,
-            last_name: lastName.value,
-          })
-        }
+        // Обновляем store
+        userStore.updateName(firstName.value, lastName.value)
 
-        userStore.setUser(updatedUser)
-        clearAvatarState()
-
-        successMessage.value = 'Профиль успешно обновлён'
+        successMessage.value = 'Профиль успешно обновён'
         isEditing.value = false
       } catch (err: any) {
         if (err.data && typeof err.data === 'object') {
@@ -125,10 +94,6 @@ export default defineComponent({
         saving.value = false
       }
     }
-
-    onUnmounted(() => {
-      clearAvatarState()
-    })
 
     const togglePasswordForm = () => {
       showPasswordForm.value = !showPasswordForm.value
@@ -182,10 +147,6 @@ export default defineComponent({
       return `${first}${last}`.toUpperCase() || 'П'
     }
 
-    const currentAvatarUrl = computed(() =>
-      avatarPreview.value || userStore.user?.avatar || null
-    )
-
     return () => (
       <div class="profile-page">
         <div class="container">
@@ -215,32 +176,9 @@ export default defineComponent({
               </div>
 
               <div class="profile-avatar">
-                {isEditing.value ? (
-                  <div class="avatar-edit-wrapper">
-                    <div class="avatar-circle" aria-hidden="true">
-                      {currentAvatarUrl.value
-                        ? <img src={currentAvatarUrl.value} alt="" class="avatar-img" />
-                        : getInitials()
-                      }
-                    </div>
-                    <label class="avatar-upload-btn" title="Изменить фото">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        class="sr-only"
-                        onChange={handleAvatarChange}
-                      />
-                      <span aria-hidden="true">📷</span>
-                    </label>
-                  </div>
-                ) : (
-                  <div class="avatar-circle" aria-hidden="true">
-                    {userStore.user?.avatar
-                      ? <img src={userStore.user.avatar} alt="" class="avatar-img" />
-                      : getInitials()
-                    }
-                  </div>
-                )}
+                <div class="avatar-circle" aria-hidden="true">
+                  {getInitials()}
+                </div>
                 <span class="sr-only">
                   Аватар пользователя {userStore.user?.first_name || ''} {userStore.user?.last_name || ''}
                 </span>

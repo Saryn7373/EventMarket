@@ -2,7 +2,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import BaseUser, Renter, Owner, Specialist, UserImage
+from .models import BaseUser, Renter, Owner, Specialist
 
 
 # ────────────────────────────────────────────────
@@ -61,12 +61,11 @@ class RegisterSerializer(serializers.Serializer):
 class MeSerializer(serializers.ModelSerializer):
     role = serializers.SerializerMethodField()
     role_display = serializers.SerializerMethodField()
-    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model  = BaseUser
-        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'role_display', 'date_joined', 'avatar']
-        read_only_fields = ['id', 'email', 'role', 'role_display', 'date_joined', 'avatar']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'role_display', 'date_joined']
+        read_only_fields = ['id', 'email', 'role', 'role_display', 'date_joined']
 
     def get_role(self, obj):
         if obj.is_superuser or obj.is_staff:
@@ -88,26 +87,6 @@ class MeSerializer(serializers.ModelSerializer):
             'unknown':    'Без роли',
         }
         return labels[self.get_role(obj)]
-
-    def get_avatar(self, obj):
-        try:
-            return obj.avatar.image.url  # относительный /media/... — проксируется Nuxt
-        except Exception:
-            return None
-
-    def update(self, instance, validated_data):
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        instance.last_name = validated_data.get('last_name', instance.last_name)
-        instance.save()
-
-        request = self.context.get('request')
-        if request and 'avatar' in request.FILES:
-            UserImage.objects.update_or_create(
-                user=instance,
-                defaults={'image': request.FILES['avatar']},
-            )
-
-        return instance
 
 
 # ────────────────────────────────────────────────

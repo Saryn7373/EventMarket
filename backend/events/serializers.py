@@ -39,7 +39,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
 
     def get_venues(self, obj):
         result = []
-        for booking in obj.bookings.exclude(status='cancelled').select_related('venue').order_by('created_at'):
+        for booking in obj.bookings.select_related('venue').order_by('created_at'):
             v = booking.venue
             result.append({
                 'id':                     str(v.id),
@@ -55,7 +55,7 @@ class EventDetailSerializer(serializers.ModelSerializer):
 
     def get_specialists(self, obj):
         result = []
-        for hire in obj.hires.exclude(status='cancelled').select_related('specialist__user').order_by('created_at'):
+        for hire in obj.hires.select_related('specialist__user').order_by('created_at'):
             s = hire.specialist
             result.append({
                 'id':                    str(s.user.id),

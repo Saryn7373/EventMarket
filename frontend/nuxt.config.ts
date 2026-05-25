@@ -71,9 +71,6 @@ export default defineNuxtConfig({
     '/api/**': {
       proxy: 'http://localhost:8000/api/**',
     },
-    '/media/**': {
-      proxy: 'http://localhost:8000/media/**',
-    },
   },
 
   // Vite proxy (для Nuxt 3)
@@ -81,10 +78,6 @@ export default defineNuxtConfig({
     server: {
       proxy: {
         '/api': {
-          target: 'http://localhost:8000',
-          changeOrigin: true,
-        },
-        '/media': {
           target: 'http://localhost:8000',
           changeOrigin: true,
         },

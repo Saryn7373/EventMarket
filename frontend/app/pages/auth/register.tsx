@@ -32,18 +32,6 @@ export default defineComponent({
     const licenseNumber = ref('')
     const inn = ref('')
 
-    // Аватар
-    const avatarFile = ref<File | null>(null)
-    const avatarPreview = ref<string | null>(null)
-
-    const handleAvatarChange = (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
-      if (avatarPreview.value) URL.revokeObjectURL(avatarPreview.value)
-      avatarFile.value = file
-      avatarPreview.value = URL.createObjectURL(file)
-    }
-
     // Состояние
     const loading = ref(false)
     const error = ref('')
@@ -181,17 +169,6 @@ export default defineComponent({
         api.setAccessToken(data.access)
         useCookie<string | null>('refresh_token', { maxAge: 60 * 60 * 24 * 7, path: '/' }).value = data.refresh
 
-        // Загружаем аватар если выбран
-        if (avatarFile.value) {
-          try {
-            const fd = new FormData()
-            fd.append('avatar', avatarFile.value)
-            await api.patchForm('/auth/me/', fd)
-          } catch {
-            // Некритичная ошибка — продолжаем
-          }
-        }
-
         success.value = 'Регистрация успешна! Перенаправляем...'
 
         // Редирект в дашборд
@@ -314,26 +291,6 @@ export default defineComponent({
           </div>
         )}
 
-        {/* Аватар */}
-        <div class="reg-avatar-section">
-          <div class="reg-avatar-circle">
-            {avatarPreview.value
-              ? <img src={avatarPreview.value} alt="" class="reg-avatar-img" />
-              : <span aria-hidden="true" class="reg-avatar-placeholder">👤</span>
-            }
-          </div>
-          <label class="btn btn--ghost btn--sm reg-avatar-btn">
-            <input
-              type="file"
-              accept="image/*"
-              class="sr-only"
-              onChange={handleAvatarChange}
-            />
-            {avatarFile.value ? 'Изменить фото' : 'Добавить фото профиля'}
-          </label>
-          <p class="reg-avatar-hint">Необязательно</p>
-        </div>
-
         <form
           class="register-form"
           aria-labelledby="register-title-step2"
@@ -395,7 +352,7 @@ export default defineComponent({
                 modelValue={passwordConfirm.value}
                 onUpdate:modelValue={(val: string) => { passwordConfirm.value = val }}
                 type="password"
-                label="Повтор пароля"
+                label="Подтверждение пароля"
                 placeholder="Повторите пароль"
                 autocomplete="new-password"
                 error={passwordError.value}

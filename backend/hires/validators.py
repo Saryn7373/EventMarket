@@ -144,9 +144,9 @@ def validate_status_transition_permissions(hire, new_status: str, user) -> None:
     is_specialist = hasattr(user, "specialist") and hire.specialist == user.specialist
 
     if new_status == "confirmed":
-        if not (is_renter or is_specialist):
+        if not is_renter:
             raise ValidationError(
-                {"status": "Подтвердить найм может организатор мероприятия или специалист."}
+                {"status": "Подтвердить найм может только организатор мероприятия."}
             )
 
     elif new_status == "cancelled":

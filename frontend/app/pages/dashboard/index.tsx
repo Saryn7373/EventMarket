@@ -16,7 +16,6 @@ import type {
   BookingListInfo,
   BookingStatus,
   HireListInfo,
-  HireStatus,
   Event,
   Venue,
   EventTheme,
@@ -122,14 +121,6 @@ export default defineComponent({
 
     // Данные специалиста
     const specialistHires = ref<HireListInfo[]>([])
-
-    // ── Управление наймами (специалист) ──
-    const processingHireId     = ref<string | null>(null)
-    const confirmHireError     = ref('')
-    const cancelHireOpen       = ref(false)
-    const cancelHireId         = ref<string | null>(null)
-    const cancelHireSubmitting = ref(false)
-    const cancelHireError      = ref('')
 
     // ── Фильтры и пагинация (арендатор) ──
     const statusFilter = ref<EventStatus | ''>('')
@@ -495,59 +486,6 @@ export default defineComponent({
         cancelBookingError.value = e.data?.detail || e.message || 'Ошибка при отмене'
       } finally {
         cancelBookingSubmitting.value = false
-      }
-    }
-
-    // ── Изменение статуса найма ──
-    const applyHireStatus = async (id: string, newStatus: 'confirmed' | 'cancelled') => {
-      const res = await $api.patch<{ status: string; status_display: string }>(
-        API_ENDPOINTS.hires.status(id),
-        { status: newStatus },
-      )
-      const idx = specialistHires.value.findIndex(h => h.id === id)
-      if (idx >= 0) {
-        specialistHires.value[idx] = {
-          ...specialistHires.value[idx],
-          status: res.status as HireStatus,
-          status_display: res.status_display,
-        }
-      }
-    }
-
-    const confirmHire = async (id: string) => {
-      processingHireId.value = id
-      confirmHireError.value = ''
-      try {
-        await applyHireStatus(id, 'confirmed')
-      } catch (e: any) {
-        confirmHireError.value = e.data?.detail || e.message || 'Ошибка при подтверждении'
-      } finally {
-        processingHireId.value = null
-      }
-    }
-
-    const openCancelHire = (id: string) => {
-      cancelHireId.value   = id
-      cancelHireError.value = ''
-      cancelHireOpen.value = true
-    }
-
-    const closeCancelHire = () => {
-      cancelHireOpen.value = false
-      cancelHireId.value   = null
-    }
-
-    const submitCancelHire = async () => {
-      if (!cancelHireId.value) return
-      cancelHireSubmitting.value = true
-      cancelHireError.value      = ''
-      try {
-        await applyHireStatus(cancelHireId.value, 'cancelled')
-        closeCancelHire()
-      } catch (e: any) {
-        cancelHireError.value = e.data?.detail || e.message || 'Ошибка при отмене'
-      } finally {
-        cancelHireSubmitting.value = false
       }
     }
 
@@ -1131,139 +1069,46 @@ export default defineComponent({
 
     // ── Вид Специалиста ──
     const renderSpecialist = () => (
-      <>
-        <section class="dashboard-section" aria-labelledby="specialist-hires-title">
-          <div class="section-header">
-            <h2 id="specialist-hires-title" class="section-title">Мероприятия, на которые меня наняли</h2>
-          </div>
+      <section class="dashboard-section" aria-labelledby="specialist-hires-title">
+        <div class="section-header">
+          <h2 id="specialist-hires-title" class="section-title">Мероприятия, на которые меня наняли</h2>
+        </div>
 
-          {confirmHireError.value && (
-            <div class="booking-alert">
-              <UiAlert variant="error" title="Ошибка">{confirmHireError.value}</UiAlert>
+        {specialistHires.value.length === 0
+          ? renderEmpty('🤝', 'Вас пока никто не нанял', 'Когда арендаторы пригласят вас на мероприятие, они появятся здесь')
+          : (
+            <div class="table-wrapper">
+              <table class="data-table">
+                <caption class="sr-only">Мероприятия, на которые вас наняли</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Мероприятие</th>
+                    <th scope="col">Дата</th>
+                    <th scope="col">Период работы</th>
+                    <th scope="col">Часов</th>
+                    <th scope="col">Гонорар</th>
+                    <th scope="col">Статус</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {specialistHires.value.map((h) => (
+                    <tr key={h.id}>
+                      <td><strong>{h.event_title}</strong></td>
+                      <td>{formatDate(h.event_date)}</td>
+                      <td>
+                        <div>{formatDateTime(h.start_datetime)}</div>
+                        <div class="muted text-sm">до {formatDateTime(h.end_datetime)}</div>
+                      </td>
+                      <td>{h.duration_hours}</td>
+                      <td class="text-semibold">{formatCurrency(h.total_price)}</td>
+                      <td>{renderStatusBadge(h.status_display, HIRE_STATUS_COLORS[h.status] ?? 'gray')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-
-          {specialistHires.value.length === 0
-            ? renderEmpty('🤝', 'Вас пока никто не нанял', 'Когда арендаторы пригласят вас на мероприятие, они появятся здесь')
-            : (
-              <div class="table-wrapper">
-                <table class="data-table">
-                  <caption class="sr-only">Мероприятия, на которые вас наняли</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Мероприятие</th>
-                      <th scope="col">Дата</th>
-                      <th scope="col">Период работы</th>
-                      <th scope="col">Часов</th>
-                      <th scope="col">Гонорар</th>
-                      <th scope="col">Статус</th>
-                      <th scope="col">Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {specialistHires.value.map((h) => {
-                      const isProcessing = processingHireId.value === h.id
-                      return (
-                        <tr key={h.id}>
-                          <td><strong>{h.event_title}</strong></td>
-                          <td>{formatDate(h.event_date)}</td>
-                          <td>
-                            <div>{formatDateTime(h.start_datetime)}</div>
-                            <div class="muted text-sm">до {formatDateTime(h.end_datetime)}</div>
-                          </td>
-                          <td>{h.duration_hours}</td>
-                          <td class="text-semibold">{formatCurrency(h.total_price)}</td>
-                          <td>{renderStatusBadge(h.status_display, HIRE_STATUS_COLORS[h.status] ?? 'gray')}</td>
-                          <td class="booking-actions-cell">
-                            {h.status === 'pending' && (
-                              <div class="booking-actions">
-                                <button
-                                  type="button"
-                                  class="btn btn--primary btn--sm"
-                                  onClick={() => confirmHire(h.id)}
-                                  disabled={isProcessing}
-                                  aria-busy={isProcessing ? 'true' : undefined}
-                                >
-                                  {isProcessing
-                                    ? <span class="spinner" aria-hidden="true" />
-                                    : 'Принять'}
-                                </button>
-                                <button
-                                  type="button"
-                                  class="btn btn--danger btn--sm"
-                                  onClick={() => openCancelHire(h.id)}
-                                  disabled={isProcessing}
-                                >
-                                  Отклонить
-                                </button>
-                              </div>
-                            )}
-                            {h.status === 'confirmed' && (
-                              <button
-                                type="button"
-                                class="btn btn--danger btn--sm"
-                                onClick={() => openCancelHire(h.id)}
-                              >
-                                Отменить
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-        </section>
-
-        {/* ── Диалог отмены найма ── */}
-        <UiDialog
-          open={cancelHireOpen.value}
-          title="Отменить найм?"
-          size="sm"
-          onClose={closeCancelHire}
-        >
-          {{
-            default: () => (
-              <div class="ep-cancel-confirm">
-                <p class="ep-cancel-confirm__text">
-                  Вы уверены, что хотите отменить этот найм?
-                  Организатор мероприятия будет уведомлён.
-                </p>
-                {cancelHireError.value && (
-                  <div class="ecf__alert">
-                    <UiAlert variant="error" title="Ошибка">{cancelHireError.value}</UiAlert>
-                  </div>
-                )}
-              </div>
-            ),
-            footer: () => (
-              <>
-                <button
-                  type="button"
-                  class="btn btn--secondary"
-                  onClick={closeCancelHire}
-                  disabled={cancelHireSubmitting.value}
-                >
-                  Не отменять
-                </button>
-                <button
-                  type="button"
-                  class="btn btn--danger"
-                  onClick={submitCancelHire}
-                  disabled={cancelHireSubmitting.value}
-                  aria-busy={cancelHireSubmitting.value ? 'true' : undefined}
-                >
-                  {cancelHireSubmitting.value
-                    ? <><span class="spinner" aria-hidden="true" /><span class="sr-only">Отмена</span></>
-                    : 'Да, отменить'}
-                </button>
-              </>
-            ),
-          }}
-        </UiDialog>
-      </>
+      </section>
     )
 
     // ── Заголовки по роли ──

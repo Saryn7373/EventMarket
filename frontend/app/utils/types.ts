@@ -20,7 +20,6 @@ export interface User {
   role: UserRole
   role_display: string
   date_joined: string
-  avatar: string | null
 }
 
 export type UserRole = 'renter' | 'owner' | 'specialist' | 'admin' | 'unknown'
