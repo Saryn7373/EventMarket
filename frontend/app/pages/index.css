@@ -65,6 +65,86 @@
   line-height: 1.6;
 }
 
+/* ── Поиск площадок ── */
+.venues-search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.venues-search-bar__input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 14rem;
+  max-width: 28rem;
+  display: flex;
+  align-items: center;
+}
+
+.venues-search-bar__icon {
+  position: absolute;
+  left: 0.75rem;
+  font-size: 0.9rem;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.venues-search-bar__input {
+  width: 100%;
+  padding: 0.5rem 2.5rem 0.5rem 2.25rem;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  color: var(--color-gray-900);
+  background: var(--color-white);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.venues-search-bar__input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.venues-search-bar__input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.venues-search-bar__spinner {
+  position: absolute;
+  right: 0.75rem;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--color-gray-200);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: venues-spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes venues-spin {
+  to { transform: rotate(360deg); }
+}
+
+.venues-search-bar__count {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.venues-empty {
+  padding: var(--spacing-xl) 0;
+  text-align: center;
+  color: var(--color-gray-500);
+  font-size: 0.9375rem;
+}
+
 /* ── Виджеты секций ── */
 .home-section {
   padding: var(--spacing-xl) 0;
@@ -190,6 +270,10 @@
 
 /* ─── ≤ 768px ─── */
 @media (max-width: 48rem) {
+  .venues-search-bar__input-wrap {
+    max-width: 100%;
+  }
+
   .hero {
     padding: var(--spacing-xl) 0;
   }
@@ -220,6 +304,14 @@
 
 /* ─── ≤ 640px ─── */
 @media (max-width: 40rem) {
+  .venues-search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .venues-search-bar__count {
+    text-align: center;
+  }
   .hero-title {
     font-size: 2.25rem;
   }

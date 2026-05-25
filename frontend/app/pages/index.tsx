@@ -1,8 +1,8 @@
-import { defineComponent, ref, onMounted } from 'vue'
+import { defineComponent, ref, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useApi } from '~/composables/useApi'
 import { API_ENDPOINTS } from '~/utils/constants'
-import type { Venue, SpecialistPublic, TopOrganizer } from '~/utils/types'
+import type { Venue, SpecialistPublic, TopOrganizer, PaginatedResponse } from '~/utils/types'
 
 definePageMeta({ middleware: 'home' })
 
@@ -11,9 +11,34 @@ export default defineComponent({
   setup() {
     const $api = useApi()
 
-    const venues      = ref<Venue[]>([])
-    const specialists = ref<SpecialistPublic[]>([])
-    const organizers  = ref<TopOrganizer[]>([])
+    const venues        = ref<Venue[]>([])
+    const venueCount    = ref<number | null>(null)
+    const venueSearch   = ref('')
+    const venueLoading  = ref(false)
+    const specialists   = ref<SpecialistPublic[]>([])
+    const organizers    = ref<TopOrganizer[]>([])
+
+    let venueSearchTimer: ReturnType<typeof setTimeout> | null = null
+
+    const fetchVenues = async (search?: string) => {
+      venueLoading.value = true
+      try {
+        const params: Record<string, any> = { page_size: 3 }
+        if (search?.trim()) params.search = search.trim()
+        const res = await $api.get<PaginatedResponse<Venue>>(API_ENDPOINTS.venues.list, { params })
+        venues.value = res.results
+        venueCount.value = res.count
+      } catch {
+        // ignore
+      } finally {
+        venueLoading.value = false
+      }
+    }
+
+    watch(venueSearch, (val) => {
+      if (venueSearchTimer) clearTimeout(venueSearchTimer)
+      venueSearchTimer = setTimeout(() => fetchVenues(val), 400)
+    })
 
     const formatCurrency = (amount: number | null): string => {
       if (!amount) return 'Не указана'
@@ -44,12 +69,11 @@ export default defineComponent({
     }
 
     onMounted(async () => {
-      const [venuesRes, specialistsRes, organizersRes] = await Promise.allSettled([
-        $api.get<{ results: Venue[] }>(API_ENDPOINTS.venues.list, { params: { page_size: 3 } }),
+      const [specialistsRes, organizersRes] = await Promise.allSettled([
         $api.get<{ results: SpecialistPublic[] }>(API_ENDPOINTS.specialists.list, { params: { page_size: 3, ordering: '-rating' } }),
         $api.get<TopOrganizer[]>(API_ENDPOINTS.auth.topOrganizers),
       ])
-      if (venuesRes.status === 'fulfilled')      venues.value      = venuesRes.value.results
+      fetchVenues()
       if (specialistsRes.status === 'fulfilled') specialists.value = specialistsRes.value.results
       if (organizersRes.status === 'fulfilled')  organizers.value  = organizersRes.value
     })
@@ -112,79 +136,117 @@ export default defineComponent({
         </section>
 
         {/* ── Площадки ── */}
-        {venues.value.length > 0 && (
+        {venueCount.value !== null && (
           <section class="home-section" aria-labelledby="home-venues-title">
             <div class="container">
               <div class="home-section__header">
                 <h2 id="home-venues-title" class="home-section__title">Площадки</h2>
                 <RouterLink to="/venues" class="home-section__link">Смотреть все →</RouterLink>
               </div>
-              <ul class="home-venues-grid" aria-label="Площадки">
-                {venues.value.map((venue) => {
-                  const titleId = `hv-${venue.id}-title`
-                  return (
-                    <li key={venue.id}>
-                      <article class="pub-venue-card" aria-labelledby={titleId}>
-                        <RouterLink
-                          to={`/venues/${venue.slug}`}
-                          class="pub-venue-card__link"
-                          aria-label={`Открыть страницу площадки «${venue.name}»`}
-                          tabindex="-1"
-                          aria-hidden="true"
-                        >
-                          {venue.main_photo ? (
-                            <div class="pub-venue-card__photo">
-                              <img src={venue.main_photo} alt="" loading="lazy" />
-                            </div>
-                          ) : (
-                            <div class="pub-venue-card__photo pub-venue-card__photo--placeholder" aria-hidden="true">
-                              🏛️
-                            </div>
-                          )}
-                        </RouterLink>
-                        <div class="pub-venue-card__body">
-                          <h3 id={titleId} class="pub-venue-card__title">
-                            <RouterLink to={`/venues/${venue.slug}`} class="pub-venue-card__title-link">
-                              {venue.name}
-                            </RouterLink>
-                          </h3>
-                          <p class="pub-venue-card__location">
-                            <span aria-hidden="true">📍</span>{' '}
-                            {venue.city}{venue.address ? `, ${venue.address}` : ''}
-                          </p>
-                          <dl class="pub-venue-card__details">
-                            <div class="pub-venue-card__detail">
-                              <dt>Вместимость</dt>
-                              <dd>
-                                {venue.capacity_min && venue.capacity_max
-                                  ? `${venue.capacity_min}–${venue.capacity_max} чел.`
-                                  : `до ${venue.capacity_max} чел.`}
-                              </dd>
-                            </div>
-                            {venue.price_per_hour && (
-                              <div class="pub-venue-card__detail">
-                                <dt>За час</dt>
-                                <dd class="pub-venue-card__price">{formatCurrency(venue.price_per_hour)}</dd>
+              <div class="venues-search-bar">
+                <div class="venues-search-bar__input-wrap">
+                  <input
+                    class="venues-search-bar__input"
+                    type="search"
+                    placeholder="Поиск по названию площадки…"
+                    value={venueSearch.value}
+                    onInput={(e) => { venueSearch.value = (e.target as HTMLInputElement).value }}
+                    aria-label="Поиск по названию площадки"
+                  />
+                  {venueLoading.value && (
+                    <span class="venues-search-bar__spinner" aria-hidden="true" />
+                  )}
+                </div>
+                <span class="venues-search-bar__count" aria-live="polite" aria-atomic="true">
+                  {venueCount.value === 0
+                    ? 'Площадок не найдено'
+                    : (() => {
+                        const n = venueCount.value!
+                        const mod10 = n % 10
+                        const mod100 = n % 100
+                        const word = (mod100 >= 11 && mod100 <= 19) ? 'площадок'
+                          : mod10 === 1 ? 'площадка'
+                          : (mod10 >= 2 && mod10 <= 4) ? 'площадки'
+                          : 'площадок'
+                        return `${n} ${word}`
+                      })()
+                  }
+                </span>
+              </div>
+              {venues.value.length > 0 ? (
+                <ul class="home-venues-grid" aria-label="Площадки">
+                  {venues.value.map((venue) => {
+                    const titleId = `hv-${venue.id}-title`
+                    return (
+                      <li key={venue.id}>
+                        <article class="pub-venue-card" aria-labelledby={titleId}>
+                          <RouterLink
+                            to={`/venues/${venue.slug}`}
+                            class="pub-venue-card__link"
+                            aria-label={`Открыть страницу площадки «${venue.name}»`}
+                            tabindex="-1"
+                            aria-hidden="true"
+                          >
+                            {venue.main_photo ? (
+                              <div class="pub-venue-card__photo">
+                                <img src={venue.main_photo} alt="" loading="lazy" />
+                              </div>
+                            ) : (
+                              <div class="pub-venue-card__photo pub-venue-card__photo--placeholder" aria-hidden="true">
+                                🏛️
                               </div>
                             )}
-                            {venue.price_per_day && (
+                          </RouterLink>
+                          <div class="pub-venue-card__body">
+                            <h3 id={titleId} class="pub-venue-card__title">
+                              <RouterLink to={`/venues/${venue.slug}`} class="pub-venue-card__title-link">
+                                {venue.name}
+                              </RouterLink>
+                            </h3>
+                            <p class="pub-venue-card__location">
+                              <span aria-hidden="true">📍</span>{' '}
+                              {venue.city}{venue.address ? `, ${venue.address}` : ''}
+                            </p>
+                            <dl class="pub-venue-card__details">
                               <div class="pub-venue-card__detail">
-                                <dt>За день</dt>
-                                <dd class="pub-venue-card__price">{formatCurrency(venue.price_per_day)}</dd>
+                                <dt>Вместимость</dt>
+                                <dd>
+                                  {venue.capacity_min && venue.capacity_max
+                                    ? `${venue.capacity_min}–${venue.capacity_max} чел.`
+                                    : `до ${venue.capacity_max} чел.`}
+                                </dd>
                               </div>
+                              {venue.price_per_hour && (
+                                <div class="pub-venue-card__detail">
+                                  <dt>За час</dt>
+                                  <dd class="pub-venue-card__price">{formatCurrency(venue.price_per_hour)}</dd>
+                                </div>
+                              )}
+                              {venue.price_per_day && (
+                                <div class="pub-venue-card__detail">
+                                  <dt>За день</dt>
+                                  <dd class="pub-venue-card__price">{formatCurrency(venue.price_per_day)}</dd>
+                                </div>
+                              )}
+                            </dl>
+                            {venue.is_verified && (
+                              <span class="pub-venue-card__verified" title="Верифицированная площадка">
+                                <span aria-hidden="true">✓</span> Верифицировано
+                              </span>
                             )}
-                          </dl>
-                          {venue.is_verified && (
-                            <span class="pub-venue-card__verified" title="Верифицированная площадка">
-                              <span aria-hidden="true">✓</span> Верифицировано
-                            </span>
-                          )}
-                        </div>
-                      </article>
-                    </li>
-                  )
-                })}
-              </ul>
+                          </div>
+                        </article>
+                      </li>
+                    )
+                  })}
+                </ul>
+              ) : (
+                !venueLoading.value && venueSearch.value.trim() && (
+                  <p class="venues-empty">
+                    По запросу «{venueSearch.value.trim()}» площадок не найдено
+                  </p>
+                )
+              )}
             </div>
           </section>
         )}
