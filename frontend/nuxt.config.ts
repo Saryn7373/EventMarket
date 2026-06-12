@@ -65,14 +65,15 @@ export default defineNuxtConfig({
     port: 3000,
   },
 
-  // Dev proxy — избегаем CORS проблем
-  // Запросы на /api будут проксироваться на backend
+  // Прокси для Nitro-сервера (SSR + client в prod)
+  // В Docker: NUXT_INTERNAL_API_URL=http://backend:8000 (build arg)
+  // Локально: http://localhost:8000 (по умолчанию)
   routeRules: {
     '/api/**': {
-      proxy: 'http://localhost:8000/api/**',
+      proxy: `${process.env.NUXT_INTERNAL_API_URL || 'http://localhost:8000'}/api/**`,
     },
     '/media/**': {
-      proxy: 'http://localhost:8000/media/**',
+      proxy: `${process.env.NUXT_INTERNAL_API_URL || 'http://localhost:8000'}/media/**`,
     },
   },
 

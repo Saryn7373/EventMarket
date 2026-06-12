@@ -1,18 +1,81 @@
-version: '3.9'
-
 services:
   db:
     image: postgres:18
     container_name: eventmarket_db
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: EventMarket
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5433:5432"
+    env_file: ./backend/.env
     volumes:
       - postgres_data:/var/lib/postgresql
 
+  redis:
+    image: redis:7-alpine
+    container_name: eventmarket_redis
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    container_name: eventmarket_backend
+    restart: unless-stopped
+    depends_on:
+      - db
+      - redis
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+      DJANGO_RUN_MIGRATIONS: "true"
+    volumes:
+      - media_data:/app/media
+    ports:
+      - "8000:8000"
+
+  celery_worker:
+    build: ./backend
+    container_name: eventmarket_celery_worker
+    restart: unless-stopped
+    entrypoint: []
+    command: celery -A EventMarket worker -l info
+    depends_on:
+      - db
+      - redis
+      - backend
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+    volumes:
+      - media_data:/app/media
+
+  celery_beat:
+    build: ./backend
+    container_name: eventmarket_celery_beat
+    restart: unless-stopped
+    entrypoint: []
+    command: celery -A EventMarket beat -l info --pidfile /tmp/celerybeat.pid
+    depends_on:
+      - db
+      - redis
+      - backend
+    env_file: ./backend/.env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/0
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NUXT_INTERNAL_API_URL: http://backend:8000
+    container_name: eventmarket_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
 volumes:
   postgres_data:
+  media_data:

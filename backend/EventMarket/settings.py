@@ -142,6 +142,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -219,3 +220,20 @@ CORS_ALLOW_HEADERS = env.list('CORS_ALLOW_HEADERS', default=[
     'x-csrftoken',
     'x-requested-with',
 ])
+
+# ============================================
+# Celery
+# ============================================
+
+CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+CELERY_BEAT_SCHEDULE = {
+    'update-expired-statuses': {
+        'task': 'bookings.tasks.update_expired_statuses',
+        'schedule': 60.0,  # каждую минуту
+    },
+}
