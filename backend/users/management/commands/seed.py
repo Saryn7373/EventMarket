@@ -11,6 +11,7 @@ from events.models import Event
 from bookings.models import Booking
 from hires.models import Hire
 from payments.models import Payment
+from reviews.models import VenueReview, SpecialistReview
 
 from django.utils import timezone
 
@@ -42,10 +43,13 @@ class Command(BaseCommand):
         bookings    = self._seed_bookings(events, venues, renters, options['bookings'])
         hires       = self._seed_hires(events, specialists, options['hires'])
         self._seed_payments(renters, bookings, hires)
+        self._seed_reviews(bookings, hires)
 
         self.stdout.write(self.style.SUCCESS('✅ Seeding complete!'))
 
     def _clear(self):
+        VenueReview.objects.all().delete()
+        SpecialistReview.objects.all().delete()
         Payment.objects.all().delete()
         Hire.objects.all().delete()
         Booking.objects.all().delete()
@@ -217,3 +221,50 @@ class Command(BaseCommand):
             )
             count += 1
         self.stdout.write(f'  💳 Payments: {count}')
+
+    def _seed_reviews(self, bookings, hires):
+        venue_count = 0
+        seen_venue_pairs = set()
+        for booking in bookings:
+            if booking.status != 'completed':
+                continue
+            pair = (booking.renter_id, booking.venue_id)
+            if pair in seen_venue_pairs:
+                continue
+            seen_venue_pairs.add(pair)
+            if not fake.boolean(chance_of_getting_true=70):
+                continue
+            VenueReview.objects.get_or_create(
+                venue=booking.venue,
+                renter=booking.renter,
+                defaults={
+                    'rating': random.randint(3, 5),
+                    'comment': fake.text(max_nb_chars=200),
+                },
+            )
+            venue_count += 1
+
+        specialist_count = 0
+        seen_specialist_pairs = set()
+        for hire in hires:
+            if hire.status != 'completed':
+                continue
+            renter = hire.event.renter
+            pair = (renter.pk, hire.specialist_id)
+            if pair in seen_specialist_pairs:
+                continue
+            seen_specialist_pairs.add(pair)
+            if not fake.boolean(chance_of_getting_true=70):
+                continue
+            SpecialistReview.objects.get_or_create(
+                specialist=hire.specialist,
+                renter=renter,
+                defaults={
+                    'rating': random.randint(3, 5),
+                    'comment': fake.text(max_nb_chars=200),
+                },
+            )
+            specialist_count += 1
+
+        self.stdout.write(f'  ⭐ Venue reviews: {venue_count}')
+        self.stdout.write(f'  ⭐ Specialist reviews: {specialist_count}')

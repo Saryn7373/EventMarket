@@ -1,3 +1,4 @@
+from django.db.models import Avg
 from rest_framework import serializers
 from .models import Venue, VenueImage
 
@@ -39,6 +40,8 @@ class VenueDetailSerializer(serializers.ModelSerializer):
     owner_email         = serializers.EmailField(source='owner.user.email', read_only=True)
     images              = VenueImageSerializer(many=True, read_only=True)
     has_active_bookings = serializers.SerializerMethodField()
+    rating              = serializers.SerializerMethodField()
+    reviews_count       = serializers.SerializerMethodField()
 
     class Meta:
         model  = Venue
@@ -54,11 +57,19 @@ class VenueDetailSerializer(serializers.ModelSerializer):
             'owner_email', 'images',
             'created_at', 'updated_at',
             'has_active_bookings',
+            'rating', 'reviews_count',
         ]
         read_only_fields = ['id', 'slug', 'is_verified', 'created_at', 'updated_at', 'owner_email']
 
     def get_has_active_bookings(self, obj):
         return obj.bookings.filter(status__in=['pending', 'confirmed']).exists()
+
+    def get_rating(self, obj):
+        avg = obj.reviews.aggregate(avg=Avg('rating'))['avg']
+        return round(avg, 2) if avg is not None else 0.0
+
+    def get_reviews_count(self, obj):
+        return obj.reviews.count()
 
 
 class VenueWriteSerializer(serializers.ModelSerializer):

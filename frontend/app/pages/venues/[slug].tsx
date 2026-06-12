@@ -3,7 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useApi } from '~/composables/useApi'
 import { useUserStore } from '~/stores/user'
 import { API_ENDPOINTS } from '~/utils/constants'
-import type { Venue, Event, BusySlot } from '~/utils/types'
+import type { Venue, Event, BusySlot, VenueReview, ReviewEligibility } from '~/utils/types'
 import UiDialog from '~/components/ui/Dialog'
 import UiSelect from '~/components/ui/Select'
 import UiAlert from '~/components/ui/Alert'
@@ -94,6 +94,21 @@ export default defineComponent({
     const deleteSubmitting = ref(false)
     const deleteError      = ref('')
 
+    // ── Отзывы ──
+    const reviews        = ref<VenueReview[]>([])
+    const reviewsCount   = ref(0)
+    const reviewsPage    = ref(1)
+    const reviewsHasNext = ref(false)
+    const reviewsLoading = ref(true)
+
+    const eligibility = ref<ReviewEligibility<VenueReview> | null>(null)
+
+    const reviewForm       = reactive({ rating: 0, comment: '' })
+    const reviewHover      = ref(0)
+    const reviewSubmitting = ref(false)
+    const reviewError      = ref('')
+    const reviewSuccess    = ref(false)
+
     // ── Форматирование ──
     const formatCurrency = (amount: string | number | null): string => {
       if (!amount) return 'Не указана'
@@ -105,10 +120,95 @@ export default defineComponent({
     const formatDate = (d: string) =>
       new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
+    const formatRating = (rating: number): string =>
+      rating > 0 ? rating.toFixed(1) : '—'
+
+    const ratingStars = (rating: number) => {
+      if (rating <= 0) return { filled: 0, empty: 5 }
+      const filled = Math.min(5, Math.round(rating))
+      return { filled, empty: 5 - filled }
+    }
+
+    const pluralizeReviews = (count: number): string => {
+      const mod10  = count % 10
+      const mod100 = count % 100
+      if (mod10 === 1 && mod100 !== 11) return 'отзыв'
+      if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'отзыва'
+      return 'отзывов'
+    }
+
+    // ── Отзывы ──
+    const loadReviews = async (venueId: string, page = 1) => {
+      reviewsLoading.value = true
+      try {
+        const res = await $api.get<{ results: VenueReview[]; count: number; next: string | null }>(
+          API_ENDPOINTS.reviews.venue(venueId), { params: { page } },
+        )
+        reviews.value      = page === 1 ? res.results : [...reviews.value, ...res.results]
+        reviewsCount.value = res.count
+        reviewsHasNext.value = !!res.next
+        reviewsPage.value  = page
+      } catch {
+        reviews.value = []
+      } finally {
+        reviewsLoading.value = false
+      }
+    }
+
+    const loadMoreReviews = () => {
+      if (venue.value) loadReviews(venue.value.id, reviewsPage.value + 1)
+    }
+
+    const loadEligibility = async (venueId: string) => {
+      if (!isRenter.value) return
+      try {
+        eligibility.value = await $api.get<ReviewEligibility<VenueReview>>(
+          API_ENDPOINTS.reviews.venueEligibility(venueId),
+        )
+        if (eligibility.value.existing_review) {
+          reviewForm.rating  = eligibility.value.existing_review.rating
+          reviewForm.comment = eligibility.value.existing_review.comment
+        }
+      } catch {
+        eligibility.value = null
+      }
+    }
+
+    const submitReview = async () => {
+      if (!venue.value || reviewForm.rating === 0) return
+      reviewSubmitting.value = true
+      reviewError.value      = ''
+      reviewSuccess.value    = false
+      try {
+        await $api.post(API_ENDPOINTS.reviews.venue(venue.value.id), {
+          rating:  reviewForm.rating,
+          comment: reviewForm.comment,
+        })
+        reviewSuccess.value = true
+        await Promise.all([
+          loadReviews(venue.value.id),
+          loadEligibility(venue.value.id),
+        ])
+        venue.value = await $api.get<Venue>(API_ENDPOINTS.venues.bySlug(slug.value))
+      } catch (e: any) {
+        if (e.data && typeof e.data === 'object' && !e.data.detail) {
+          reviewError.value = (Object.values(e.data) as any[]).flat().join(' ')
+        } else {
+          reviewError.value = e.data?.detail || e.message || 'Ошибка при отправке отзыва'
+        }
+      } finally {
+        reviewSubmitting.value = false
+      }
+    }
+
     // ── Загрузка площадки ──
     onMounted(async () => {
       try {
         venue.value = await $api.get<Venue>(API_ENDPOINTS.venues.bySlug(slug.value))
+        await Promise.all([
+          loadReviews(venue.value.id),
+          loadEligibility(venue.value.id),
+        ])
       } catch (e: any) {
         error.value = e.statusCode === 404
           ? 'Площадка не найдена или снята с публикации.'
@@ -594,6 +694,139 @@ export default defineComponent({
                     <p class="vd-cancel-policy">{v.cancellation_policy}</p>
                   </section>
                 )}
+
+                {/* ── Отзывы ── */}
+                <section class="vd-section vd-reviews" aria-labelledby="vd-reviews-title">
+                  <h2 id="vd-reviews-title" class="vd-section__title">Отзывы</h2>
+
+                  {v.reviews_count > 0 ? (
+                    <div class="vd-reviews__summary" aria-label={`Рейтинг площадки: ${formatRating(v.rating)} из 5`}>
+                      <span class="vd-reviews__stars" aria-hidden="true">
+                        {'★'.repeat(ratingStars(v.rating).filled)}{'☆'.repeat(ratingStars(v.rating).empty)}
+                      </span>
+                      <span class="vd-reviews__rating-value">{formatRating(v.rating)}</span>
+                      <span class="vd-reviews__rating-max" aria-hidden="true">/ 5</span>
+                      <span class="vd-reviews__count">
+                        {v.reviews_count} {pluralizeReviews(v.reviews_count)}
+                      </span>
+                    </div>
+                  ) : (
+                    <p class="vd-reviews__empty-rating">Пока нет отзывов</p>
+                  )}
+
+                  {isRenter.value && eligibility.value?.can_review && (
+                    <div class="vd-review-form-card">
+                      <h3 class="vd-review-form__title">
+                        {eligibility.value.existing_review ? 'Ваш отзыв' : 'Оставить отзыв'}
+                      </h3>
+                      <form
+                        id="vd-review-form"
+                        class="vd-review-form"
+                        onSubmit={(e) => { e.preventDefault(); submitReview() }}
+                        novalidate
+                        aria-label="Форма отзыва о площадке"
+                      >
+                        {reviewError.value && (
+                          <UiAlert variant="error" title="Ошибка">{reviewError.value}</UiAlert>
+                        )}
+                        {reviewSuccess.value && (
+                          <UiAlert variant="success" title="Спасибо!">Ваш отзыв сохранён.</UiAlert>
+                        )}
+
+                        <div class="input-wrapper">
+                          <span class="input-label" id="vd-review-rating-label">
+                            Оценка <span class="input-required" aria-hidden="true">*</span>
+                          </span>
+                          <div class="vd-star-input" role="radiogroup" aria-labelledby="vd-review-rating-label">
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <button
+                                key={n}
+                                type="button"
+                                class={['vd-star-input__btn', n <= (reviewHover.value || reviewForm.rating) && 'vd-star-input__btn--active']}
+                                role="radio"
+                                aria-checked={reviewForm.rating === n}
+                                aria-label={`${n} из 5`}
+                                onClick={() => { reviewForm.rating = n }}
+                                onMouseenter={() => { reviewHover.value = n }}
+                                onMouseleave={() => { reviewHover.value = 0 }}
+                              >★</button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div class="input-wrapper">
+                          <label class="input-label" for="vd-review-comment">Комментарий</label>
+                          <textarea
+                            id="vd-review-comment" class="input vd-edit-textarea" rows={3}
+                            value={reviewForm.comment}
+                            placeholder="Поделитесь впечатлениями о площадке"
+                            onInput={(e) => { reviewForm.comment = (e.target as HTMLTextAreaElement).value }}
+                          />
+                        </div>
+
+                        <button
+                          type="submit" class="btn btn--primary vd-review-submit"
+                          disabled={reviewSubmitting.value || reviewForm.rating === 0}
+                          aria-busy={reviewSubmitting.value ? 'true' : undefined}
+                        >
+                          {reviewSubmitting.value
+                            ? <><span class="spinner" aria-hidden="true" /><span class="sr-only">Отправка</span></>
+                            : (eligibility.value.existing_review ? 'Обновить отзыв' : 'Отправить отзыв')}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {isRenter.value && eligibility.value && !eligibility.value.can_review && (
+                    <p class="vd-reviews__hint">
+                      Оставить отзыв можно после завершённого бронирования этой площадки.
+                    </p>
+                  )}
+
+                  {reviewsLoading.value ? (
+                    <div class="vd-reviews-loading" role="status">
+                      <span class="spinner" aria-hidden="true" />
+                      <span>Загрузка отзывов...</span>
+                    </div>
+                  ) : reviews.value.length === 0 ? (
+                    <p class="vd-reviews__empty">Отзывов пока нет.</p>
+                  ) : (
+                    <>
+                      <ul class="vd-reviews-list">
+                        {reviews.value.map(review => (
+                          <li class="vd-review" key={review.id}>
+                            <div class="vd-review__header">
+                              <div class="vd-review__avatar" aria-hidden="true">
+                                {review.renter.avatar
+                                  ? <img src={review.renter.avatar} alt="" class="vd-review__avatar-img" />
+                                  : <span class="vd-review__avatar-initials">
+                                      {((review.renter.first_name?.[0] ?? '') + (review.renter.last_name?.[0] ?? '')).toUpperCase() || '?'}
+                                    </span>
+                                }
+                              </div>
+                              <div class="vd-review__meta">
+                                <span class="vd-review__name">
+                                  {`${review.renter.first_name} ${review.renter.last_name}`.trim() || 'Пользователь'}
+                                </span>
+                                <span class="vd-review__date">{formatDate(review.created_at)}</span>
+                              </div>
+                              <span class="vd-review__stars" aria-label={`Оценка: ${review.rating} из 5`}>
+                                {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                              </span>
+                            </div>
+                            {review.comment && <p class="vd-review__comment">{review.comment}</p>}
+                          </li>
+                        ))}
+                      </ul>
+
+                      {reviewsHasNext.value && (
+                        <button type="button" class="btn btn--secondary vd-reviews-more" onClick={loadMoreReviews}>
+                          Показать ещё
+                        </button>
+                      )}
+                    </>
+                  )}
+                </section>
               </div>
 
               {/* ── Боковая панель ── */}

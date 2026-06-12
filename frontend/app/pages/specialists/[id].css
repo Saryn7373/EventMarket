@@ -146,6 +146,14 @@
   color: var(--color-gray-500);
 }
 
+.sd-rating__count {
+  font-size: 0.875rem;
+  color: var(--color-gray-500);
+  margin-left: 2px;
+  padding-left: var(--spacing-sm);
+  border-left: 1px solid var(--color-gray-300);
+}
+
 /* Кнопка в карточке */
 .sd-hire-btn {
   width: 100%;
@@ -368,6 +376,174 @@
   color: var(--color-gray-600);
   margin: 0;
   max-width: 28rem;
+}
+
+/* ── Отзывы ── */
+.sd-reviews__empty-rating,
+.sd-reviews__empty {
+  font-size: 0.9375rem;
+  color: var(--color-gray-500);
+  margin: 0 0 var(--spacing-lg);
+}
+
+.sd-reviews__hint {
+  font-size: 0.875rem;
+  color: var(--color-gray-600);
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  margin: 0 0 var(--spacing-lg);
+}
+
+/* Форма отзыва */
+.sd-review-form-card {
+  background-color: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.sd-review-form__title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+  margin: 0 0 var(--spacing-md);
+}
+
+.sd-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.sd-review-textarea {
+  resize: vertical;
+}
+
+.sd-review-submit {
+  align-self: flex-start;
+}
+
+/* Выбор оценки звёздами */
+.sd-star-input {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.sd-star-input__btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--color-gray-300);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.sd-star-input__btn:hover,
+.sd-star-input__btn--active {
+  color: #f59e0b;
+}
+
+/* Список отзывов */
+.sd-reviews-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.sd-review {
+  border-bottom: 1px solid var(--color-gray-100);
+  padding-bottom: var(--spacing-lg);
+}
+
+.sd-review:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sd-review__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.sd-review__avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  background-color: var(--color-primary-light);
+  flex-shrink: 0;
+}
+
+.sd-review__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.sd-review__avatar-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.sd-review__meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.sd-review__name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.sd-review__date {
+  font-size: 0.8125rem;
+  color: var(--color-gray-500);
+}
+
+.sd-review__stars {
+  color: #f59e0b;
+  font-size: 0.9375rem;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.sd-review__comment {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-gray-800);
+  margin: 0;
+}
+
+.sd-reviews-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--color-gray-600);
+  padding: var(--spacing-md) 0;
+}
+
+.sd-reviews-more {
+  margin-top: var(--spacing-lg);
 }
 
 /* ── Адаптив ── */

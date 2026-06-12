@@ -1,9 +1,9 @@
-import { defineComponent, ref, computed, onMounted } from 'vue'
+import { defineComponent, ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useApi } from '~/composables/useApi'
 import { useUserStore } from '~/stores/user'
 import { API_ENDPOINTS } from '~/utils/constants'
-import type { SpecialistDetail, Event, SpecialistBusySlot } from '~/utils/types'
+import type { SpecialistDetail, Event, SpecialistBusySlot, SpecialistReview, ReviewEligibility } from '~/utils/types'
 import UiDialog from '~/components/ui/Dialog'
 import UiSelect from '~/components/ui/Select'
 import UiAlert from '~/components/ui/Alert'
@@ -39,6 +39,20 @@ export default defineComponent({
     const submitError  = ref('')
     const hireSuccess  = ref(false)
 
+    // ── Отзывы ──
+    const reviews        = ref<SpecialistReview[]>([])
+    const reviewsPage    = ref(1)
+    const reviewsHasNext = ref(false)
+    const reviewsLoading = ref(true)
+
+    const eligibility = ref<ReviewEligibility<SpecialistReview> | null>(null)
+
+    const reviewForm       = reactive({ rating: 0, comment: '' })
+    const reviewHover      = ref(0)
+    const reviewSubmitting = ref(false)
+    const reviewError      = ref('')
+    const reviewSuccess    = ref(false)
+
     // ── Форматирование ──
     const formatDate = (d: string) =>
       new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -55,12 +69,87 @@ export default defineComponent({
       return { filled, empty: 5 - filled }
     }
 
+    const pluralizeReviews = (count: number): string => {
+      const mod10  = count % 10
+      const mod100 = count % 100
+      if (mod10 === 1 && mod100 !== 11) return 'отзыв'
+      if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'отзыва'
+      return 'отзывов'
+    }
+
+    // ── Отзывы ──
+    const loadReviews = async (specialistId: string, page = 1) => {
+      reviewsLoading.value = true
+      try {
+        const res = await $api.get<{ results: SpecialistReview[]; count: number; next: string | null }>(
+          API_ENDPOINTS.reviews.specialist(specialistId), { params: { page } },
+        )
+        reviews.value = page === 1 ? res.results : [...reviews.value, ...res.results]
+        reviewsHasNext.value = !!res.next
+        reviewsPage.value = page
+      } catch {
+        reviews.value = []
+      } finally {
+        reviewsLoading.value = false
+      }
+    }
+
+    const loadMoreReviews = () => {
+      loadReviews(id.value, reviewsPage.value + 1)
+    }
+
+    const loadEligibility = async (specialistId: string) => {
+      if (!isRenter.value) return
+      try {
+        eligibility.value = await $api.get<ReviewEligibility<SpecialistReview>>(
+          API_ENDPOINTS.reviews.specialistEligibility(specialistId),
+        )
+        if (eligibility.value.existing_review) {
+          reviewForm.rating  = eligibility.value.existing_review.rating
+          reviewForm.comment = eligibility.value.existing_review.comment
+        }
+      } catch {
+        eligibility.value = null
+      }
+    }
+
+    const submitReview = async () => {
+      if (reviewForm.rating === 0) return
+      reviewSubmitting.value = true
+      reviewError.value      = ''
+      reviewSuccess.value    = false
+      try {
+        await $api.post(API_ENDPOINTS.reviews.specialist(id.value), {
+          rating:  reviewForm.rating,
+          comment: reviewForm.comment,
+        })
+        reviewSuccess.value = true
+        await Promise.all([
+          loadReviews(id.value),
+          loadEligibility(id.value),
+        ])
+        specialist.value = await $api.get<SpecialistDetail>(API_ENDPOINTS.specialists.detail(id.value))
+      } catch (e: any) {
+        if (e.data && typeof e.data === 'object' && !e.data.detail) {
+          reviewError.value = (Object.values(e.data) as any[]).flat().join(' ')
+        } else {
+          reviewError.value = e.data?.detail || e.message || 'Ошибка при отправке отзыва'
+        }
+      } finally {
+        reviewSubmitting.value = false
+      }
+    }
+
     // ── Загрузка специалиста ──
     onMounted(async () => {
       try {
         specialist.value = await $api.get<SpecialistDetail>(
           API_ENDPOINTS.specialists.detail(id.value),
         )
+        await Promise.all([
+          loadReviews(id.value),
+          loadEligibility(id.value),
+        ])
       } catch (e: any) {
         error.value = e.statusCode === 404
           ? 'Специалист не найден.'
@@ -260,12 +349,15 @@ export default defineComponent({
                 )}
 
                 {hasRating && (
-                  <div class="sd-rating" aria-label={`Рейтинг: ${formatRating(s.rating)} из 5`}>
+                  <div class="sd-rating" aria-label={`Рейтинг: ${formatRating(s.rating)} из 5, ${s.reviews_count} ${pluralizeReviews(s.reviews_count)}`}>
                     <span class="sd-rating__stars" aria-hidden="true">
                       {'★'.repeat(stars.filled)}{'☆'.repeat(stars.empty)}
                     </span>
                     <span class="sd-rating__value">{formatRating(s.rating)}</span>
                     <span class="sd-rating__max" aria-hidden="true">/ 5</span>
+                    {s.reviews_count > 0 && (
+                      <span class="sd-rating__count">({s.reviews_count})</span>
+                    )}
                   </div>
                 )}
 
@@ -332,6 +424,128 @@ export default defineComponent({
                     специалист рассмотрит заявку в течение суток.
                   </p>
                   {hireBtn('sd-hire-btn-main')}
+                </section>
+
+                {/* ── Отзывы ── */}
+                <section class="sd-section sd-reviews" aria-labelledby="sd-reviews-title">
+                  <h2 id="sd-reviews-title" class="sd-section__title">Отзывы</h2>
+
+                  {!hasRating && (
+                    <p class="sd-reviews__empty-rating">Пока нет отзывов</p>
+                  )}
+
+                  {isRenter.value && eligibility.value?.can_review && (
+                    <div class="sd-review-form-card">
+                      <h3 class="sd-review-form__title">
+                        {eligibility.value.existing_review ? 'Ваш отзыв' : 'Оставить отзыв'}
+                      </h3>
+                      <form
+                        id="sd-review-form"
+                        class="sd-review-form"
+                        onSubmit={(e) => { e.preventDefault(); submitReview() }}
+                        novalidate
+                        aria-label="Форма отзыва о специалисте"
+                      >
+                        {reviewError.value && (
+                          <UiAlert variant="error" title="Ошибка">{reviewError.value}</UiAlert>
+                        )}
+                        {reviewSuccess.value && (
+                          <UiAlert variant="success" title="Спасибо!">Ваш отзыв сохранён.</UiAlert>
+                        )}
+
+                        <div class="input-wrapper">
+                          <span class="input-label" id="sd-review-rating-label">
+                            Оценка <span class="input-required" aria-hidden="true">*</span>
+                          </span>
+                          <div class="sd-star-input" role="radiogroup" aria-labelledby="sd-review-rating-label">
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <button
+                                key={n}
+                                type="button"
+                                class={['sd-star-input__btn', n <= (reviewHover.value || reviewForm.rating) && 'sd-star-input__btn--active']}
+                                role="radio"
+                                aria-checked={reviewForm.rating === n}
+                                aria-label={`${n} из 5`}
+                                onClick={() => { reviewForm.rating = n }}
+                                onMouseenter={() => { reviewHover.value = n }}
+                                onMouseleave={() => { reviewHover.value = 0 }}
+                              >★</button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div class="input-wrapper">
+                          <label class="input-label" for="sd-review-comment">Комментарий</label>
+                          <textarea
+                            id="sd-review-comment" class="input sd-review-textarea" rows={3}
+                            value={reviewForm.comment}
+                            placeholder="Поделитесь впечатлениями о работе специалиста"
+                            onInput={(e) => { reviewForm.comment = (e.target as HTMLTextAreaElement).value }}
+                          />
+                        </div>
+
+                        <button
+                          type="submit" class="btn btn--primary sd-review-submit"
+                          disabled={reviewSubmitting.value || reviewForm.rating === 0}
+                          aria-busy={reviewSubmitting.value ? 'true' : undefined}
+                        >
+                          {reviewSubmitting.value
+                            ? <><span class="spinner" aria-hidden="true" /><span class="sr-only">Отправка</span></>
+                            : (eligibility.value.existing_review ? 'Обновить отзыв' : 'Отправить отзыв')}
+                        </button>
+                      </form>
+                    </div>
+                  )}
+
+                  {isRenter.value && eligibility.value && !eligibility.value.can_review && (
+                    <p class="sd-reviews__hint">
+                      Оставить отзыв можно, если у вас есть мероприятие с завершённым наймом этого специалиста.
+                    </p>
+                  )}
+
+                  {reviewsLoading.value ? (
+                    <div class="sd-reviews-loading" role="status">
+                      <span class="spinner" aria-hidden="true" />
+                      <span>Загрузка отзывов...</span>
+                    </div>
+                  ) : reviews.value.length === 0 ? (
+                    <p class="sd-reviews__empty">Отзывов пока нет.</p>
+                  ) : (
+                    <>
+                      <ul class="sd-reviews-list">
+                        {reviews.value.map(review => (
+                          <li class="sd-review" key={review.id}>
+                            <div class="sd-review__header">
+                              <div class="sd-review__avatar" aria-hidden="true">
+                                {review.renter.avatar
+                                  ? <img src={review.renter.avatar} alt="" class="sd-review__avatar-img" />
+                                  : <span class="sd-review__avatar-initials">
+                                      {((review.renter.first_name?.[0] ?? '') + (review.renter.last_name?.[0] ?? '')).toUpperCase() || '?'}
+                                    </span>
+                                }
+                              </div>
+                              <div class="sd-review__meta">
+                                <span class="sd-review__name">
+                                  {`${review.renter.first_name} ${review.renter.last_name}`.trim() || 'Пользователь'}
+                                </span>
+                                <span class="sd-review__date">{formatDate(review.created_at)}</span>
+                              </div>
+                              <span class="sd-review__stars" aria-label={`Оценка: ${review.rating} из 5`}>
+                                {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                              </span>
+                            </div>
+                            {review.comment && <p class="sd-review__comment">{review.comment}</p>}
+                          </li>
+                        ))}
+                      </ul>
+
+                      {reviewsHasNext.value && (
+                        <button type="button" class="btn btn--secondary sd-reviews-more" onClick={loadMoreReviews}>
+                          Показать ещё
+                        </button>
+                      )}
+                    </>
+                  )}
                 </section>
               </div>
             </div>

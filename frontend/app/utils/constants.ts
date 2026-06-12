@@ -198,6 +198,13 @@ export const API_ENDPOINTS = {
     byBooking: (id: string) => `/payments/booking/${id}/`,
     byHire: (id: string) => `/payments/hire/${id}/`,
   },
+  // Reviews
+  reviews: {
+    venue: (venueId: string) => `/reviews/venues/${venueId}/`,
+    venueEligibility: (venueId: string) => `/reviews/venues/${venueId}/eligibility/`,
+    specialist: (specialistId: string) => `/reviews/specialists/${specialistId}/`,
+    specialistEligibility: (specialistId: string) => `/reviews/specialists/${specialistId}/eligibility/`,
+  },
 } as const
 
 // ============================================

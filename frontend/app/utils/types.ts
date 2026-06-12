@@ -76,6 +76,8 @@ export interface Venue extends BaseEntity {
   main_photo: string | null
   images: VenueImage[]
   has_active_bookings: boolean
+  rating: number
+  reviews_count: number
 }
 
 export type VenueStatus = 'draft' | 'published' | 'archived' | 'moderation'
@@ -415,6 +417,46 @@ export interface SpecialistDetail {
   license_number: string
   city: string
   rating: string
+  reviews_count: number
   portfolio_url: string
   avatar: string | null
+}
+
+// ============================================
+// Отзывы (Reviews)
+// ============================================
+
+export interface ReviewAuthor {
+  id: string
+  first_name: string
+  last_name: string
+  avatar: string | null
+}
+
+export interface VenueReview {
+  id: string
+  renter: ReviewAuthor
+  rating: number
+  comment: string
+  created_at: string
+  updated_at: string
+}
+
+export interface SpecialistReview {
+  id: string
+  renter: ReviewAuthor
+  rating: number
+  comment: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ReviewEligibility<T> {
+  can_review: boolean
+  existing_review: T | null
+}
+
+export interface ReviewPayload {
+  rating: number
+  comment: string
 }

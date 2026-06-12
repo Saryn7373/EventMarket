@@ -119,13 +119,14 @@ class SpecialistDetailSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     avatar = serializers.SerializerMethodField()
+    reviews_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Specialist
         fields = [
             'id', 'first_name', 'last_name',
             'specialty', 'license_number', 'city',
-            'rating', 'portfolio_url', 'avatar',
+            'rating', 'reviews_count', 'portfolio_url', 'avatar',
         ]
 
     def get_avatar(self, obj):
@@ -135,6 +136,9 @@ class SpecialistDetailSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(url) if request else url
         except Exception:
             return None
+
+    def get_reviews_count(self, obj):
+        return obj.reviews.count()
 
 
 class SpecialistListSerializer(serializers.ModelSerializer):
