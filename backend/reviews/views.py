@@ -6,11 +6,14 @@ from rest_framework.views import APIView
 
 from EventMarket.pagination import StandardPagination
 from users.models import Specialist
+from users.permissions import IsAdmin
 from venues.models import Venue
 
 from .models import SpecialistReview, VenueReview
 from .permissions import IsRenter
 from .serializers import (
+    AdminReviewSerializer,
+    ModerateReviewSerializer,
     SpecialistReviewCreateSerializer,
     SpecialistReviewSerializer,
     VenueReviewCreateSerializer,
@@ -36,7 +39,7 @@ class VenueReviewListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return VenueReview.objects.filter(
-            venue_id=self.kwargs["venue_id"]
+            venue_id=self.kwargs["venue_id"], status="approved",
         ).select_related("renter__user", "renter__user__avatar")
 
     def get_serializer_class(self):
@@ -108,7 +111,7 @@ class SpecialistReviewListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return SpecialistReview.objects.filter(
-            specialist__user_id=self.kwargs["specialist_id"]
+            specialist__user_id=self.kwargs["specialist_id"], status="approved",
         ).select_related("renter__user", "renter__user__avatar")
 
     def get_serializer_class(self):
@@ -159,3 +162,62 @@ class SpecialistReviewEligibilityView(APIView):
             "can_review": can_review_specialist(renter, specialist),
             "existing_review": SpecialistReviewSerializer(existing, context={"request": request}).data if existing else None,
         })
+
+
+# ─────────────────────────────────────────────────────────────
+# Модерация отзывов (администратор)
+# ─────────────────────────────────────────────────────────────
+
+class AdminReviewListView(APIView):
+    """
+    GET /api/reviews/admin/?status=pending
+
+    Объединённый список отзывов (о площадках и специалистах) для модерации.
+    По умолчанию показываются отзывы на проверке (status=pending).
+    """
+
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        status_filter = request.query_params.get("status", "pending")
+
+        venue_qs = VenueReview.objects.select_related("venue", "renter__user")
+        spec_qs = SpecialistReview.objects.select_related("specialist__user", "renter__user")
+
+        if status_filter:
+            venue_qs = venue_qs.filter(status=status_filter)
+            spec_qs = spec_qs.filter(status=status_filter)
+
+        reviews = list(venue_qs) + list(spec_qs)
+        reviews.sort(key=lambda r: r.created_at, reverse=True)
+
+        return Response(AdminReviewSerializer(reviews, many=True).data)
+
+
+class AdminVenueReviewModerateView(APIView):
+    """POST /api/reviews/admin/venues/<uuid:pk>/moderate/ — approve/reject"""
+
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk):
+        review = get_object_or_404(VenueReview, pk=pk)
+        return _moderate(request, review)
+
+
+class AdminSpecialistReviewModerateView(APIView):
+    """POST /api/reviews/admin/specialists/<uuid:pk>/moderate/ — approve/reject"""
+
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk):
+        review = get_object_or_404(SpecialistReview, pk=pk)
+        return _moderate(request, review)
+
+
+def _moderate(request, review):
+    serializer = ModerateReviewSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    action = serializer.validated_data["action"]
+    review.status = "approved" if action == "approve" else "rejected"
+    review.save(update_fields=["status"])
+    return Response(AdminReviewSerializer(review).data, status=status.HTTP_200_OK)

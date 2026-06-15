@@ -4,7 +4,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.urls import reverse
 
-from .models import BaseUser, Renter, Owner, Specialist
+from .models import Admin, BaseUser, Renter, Owner, Specialist
 
 
 @admin.register(BaseUser)
@@ -58,6 +58,7 @@ class BaseUserAdmin(BaseUserAdmin):
     def role_badge(self, obj):
         role = obj.role
         colors = {
+            'Администратор':'#dc3545',
             'Арендатор':   '#28a745',
             'Владелец':    '#007bff',
             'Специалист':  '#ffc107',
@@ -78,7 +79,19 @@ class BaseUserAdmin(BaseUserAdmin):
     def role_readonly(self, obj):
         return obj.role
     
-    actions = ['make_renter', 'make_owner', 'make_specialist']
+    actions = ['make_admin', 'make_renter', 'make_owner', 'make_specialist']
+
+    @admin.action(description="Выдать права Администратора")
+    def make_admin(self, request, queryset):
+        created = 0
+        for user in queryset:
+            if not hasattr(user, 'admin'):
+                Admin.objects.create(user=user, granted_by=request.user)
+                if not user.is_staff:
+                    user.is_staff = True
+                    user.save(update_fields=['is_staff'])
+                created += 1
+        self.message_user(request, f"Назначено администраторами: {created}")
 
     @admin.action(description="Сделать выбранных пользователей Арендаторами")
     def make_renter(self, request, queryset):
@@ -103,8 +116,23 @@ class BaseUserAdmin(BaseUserAdmin):
 
 
 # ────────────────────────────────────────────────
-# Админка для профилей (Renter, Owner, Specialist)
+# Админка для профилей (Admin, Renter, Owner, Specialist)
 # ────────────────────────────────────────────────
+
+@admin.register(Admin)
+class AdminProfileAdmin(admin.ModelAdmin):
+    list_display = ['user_email', 'granted_by_email', 'granted_at']
+    search_fields = ['user__email']
+    readonly_fields = ['user', 'granted_by', 'granted_at']
+
+    @admin.display(description='Email', ordering='user__email')
+    def user_email(self, obj):
+        return obj.user.email if obj.user else '—'
+
+    @admin.display(description='Кем назначен')
+    def granted_by_email(self, obj):
+        return obj.granted_by.email if obj.granted_by else '—'
+
 
 @admin.register(Renter)
 class RenterAdmin(admin.ModelAdmin):

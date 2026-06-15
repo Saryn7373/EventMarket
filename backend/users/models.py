@@ -65,7 +65,14 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
         return hasattr(self, 'specialist')
 
     @property
+    def is_admin(self):
+        # Администратором считается пользователь с профилем Admin
+        # либо суперпользователь Django.
+        return hasattr(self, 'admin') or self.is_superuser
+
+    @property
     def role(self):
+        if self.is_admin:      return "Администратор"
         if self.is_renter:     return "Арендатор"
         if self.is_owner:      return "Владелец"
         if self.is_specialist: return "Специалист"
@@ -95,6 +102,38 @@ class UserImage(models.Model):
         return f"Аватар: {self.user.email}"
 
 # ROLES
+
+class Admin(models.Model):
+    """
+    Профиль Администратора платформы.
+
+    Выдаётся только другим администратором (см. users.views.GrantAdminView).
+    Даёт доступ к модерации отзывов, управлению пользователями и аналитике.
+    """
+    user = models.OneToOneField(
+        BaseUser,
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name="admin",
+        verbose_name="пользователь"
+    )
+    granted_at = models.DateTimeField(_("назначен"), auto_now_add=True)
+    granted_by = models.ForeignKey(
+        BaseUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="granted_admins",
+        verbose_name=_("кем назначен"),
+    )
+
+    class Meta:
+        verbose_name = _("администратор")
+        verbose_name_plural = _("администраторы")
+
+    def __str__(self):
+        return f"Администратор: {self.user.email}"
+
 
 class Renter(models.Model):
     """

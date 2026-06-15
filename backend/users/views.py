@@ -1,4 +1,5 @@
 from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, filters, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -10,7 +11,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 
 from EventMarket.pagination import StandardPagination
 from .filters import SpecialistFilter
-from .models import Specialist, Renter
+from .models import Admin, BaseUser, Owner, Specialist, Renter
+from .permissions import IsAdmin
 from .serializers import (
     CustomTokenObtainPairSerializer,
     RegisterSerializer,
@@ -18,6 +20,7 @@ from .serializers import (
     ChangePasswordSerializer,
     SpecialistListSerializer,
     SpecialistDetailSerializer,
+    AdminUserSerializer,
 )
 
 
@@ -143,3 +146,122 @@ class SpecialistDetailView(generics.RetrieveAPIView):
             Specialist.objects.select_related('user', 'user__avatar'),
             user__id=self.kwargs['pk'],
         )
+
+
+# ────────────────────────────────────────────────
+# Администрирование: управление пользователями
+# ────────────────────────────────────────────────
+
+class AdminUserListView(generics.ListAPIView):
+    """GET /api/auth/admin/users/ — список всех пользователей (только админ)"""
+    serializer_class = AdminUserSerializer
+    permission_classes = [IsAdmin]
+    pagination_class = StandardPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['email', 'first_name', 'last_name']
+    ordering_fields = ['date_joined', 'email']
+    ordering = ['-date_joined']
+
+    def get_queryset(self):
+        return BaseUser.objects.select_related(
+            'admin', 'renter', 'owner', 'specialist',
+        ).all()
+
+
+class AdminUserDetailView(APIView):
+    """DELETE /api/auth/admin/users/<uuid:pk>/ — удалить пользователя (только админ)"""
+    permission_classes = [IsAdmin]
+
+    def delete(self, request, pk):
+        if str(request.user.id) == str(pk):
+            return Response(
+                {"detail": "Нельзя удалить собственную учётную запись."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target = get_object_or_404(BaseUser, pk=pk)
+        if target.is_superuser:
+            return Response(
+                {"detail": "Нельзя удалить суперпользователя."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        target.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class GrantAdminView(APIView):
+    """POST /api/auth/admin/users/<uuid:pk>/grant-admin/ — выдать права администратора
+
+    Выдать роль администратора может только администратор.
+    """
+    permission_classes = [IsAdmin]
+
+    def post(self, request, pk):
+        target = get_object_or_404(BaseUser, pk=pk)
+        if target.is_admin:
+            return Response(
+                {"detail": "Пользователь уже является администратором."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        Admin.objects.create(user=target, granted_by=request.user)
+        # Даём доступ в Django-админку
+        if not target.is_staff:
+            target.is_staff = True
+            target.save(update_fields=['is_staff'])
+        return Response(
+            AdminUserSerializer(target).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class AdminAnalyticsView(APIView):
+    """GET /api/auth/admin/analytics/ — аналитика популярности (только админ)
+
+    Популярность площадок и специалистов рассчитывается по количеству
+    завершённых бронирований / наймов.
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        from venues.models import Venue
+
+        limit = int(request.query_params.get('limit', 10))
+
+        top_venues = (
+            Venue.objects
+            .annotate(completed_count=Count(
+                'bookings', filter=Q(bookings__status='completed'),
+            ))
+            .filter(completed_count__gt=0)
+            .order_by('-completed_count')
+            .select_related('owner__user')[:limit]
+        )
+        venues_data = [{
+            'id': str(v.id),
+            'name': v.name,
+            'city': v.city,
+            'slug': v.slug,
+            'completed_bookings': v.completed_count,
+        } for v in top_venues]
+
+        top_specialists = (
+            Specialist.objects
+            .annotate(completed_count=Count(
+                'hires', filter=Q(hires__status='completed'),
+            ))
+            .filter(completed_count__gt=0)
+            .order_by('-completed_count')
+            .select_related('user')[:limit]
+        )
+        specialists_data = [{
+            'id': str(s.user.id),
+            'first_name': s.user.first_name,
+            'last_name': s.user.last_name,
+            'specialty': s.specialty,
+            'city': s.city,
+            'completed_hires': s.completed_count,
+        } for s in top_specialists]
+
+        return Response({
+            'top_venues': venues_data,
+            'top_specialists': specialists_data,
+        })

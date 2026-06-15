@@ -204,8 +204,34 @@ export const API_ENDPOINTS = {
     venueEligibility: (venueId: string) => `/reviews/venues/${venueId}/eligibility/`,
     specialist: (specialistId: string) => `/reviews/specialists/${specialistId}/`,
     specialistEligibility: (specialistId: string) => `/reviews/specialists/${specialistId}/eligibility/`,
+    adminList: '/reviews/admin/',
+    adminModerateVenue: (id: string) => `/reviews/admin/venues/${id}/moderate/`,
+    adminModerateSpecialist: (id: string) => `/reviews/admin/specialists/${id}/moderate/`,
+  },
+  // Администрирование
+  admin: {
+    users: '/auth/admin/users/',
+    userDetail: (id: string) => `/auth/admin/users/${id}/`,
+    grantAdmin: (id: string) => `/auth/admin/users/${id}/grant-admin/`,
+    analytics: '/auth/admin/analytics/',
   },
 } as const
+
+// ============================================
+// Статусы модерации отзывов
+// ============================================
+
+export const REVIEW_STATUS: Record<'pending' | 'approved' | 'rejected', string> = {
+  pending: 'На проверке',
+  approved: 'Опубликован',
+  rejected: 'Отклонён',
+}
+
+export const REVIEW_STATUS_COLORS: Record<'pending' | 'approved' | 'rejected', string> = {
+  pending: 'yellow',
+  approved: 'green',
+  rejected: 'red',
+}
 
 // ============================================
 // Пагинация

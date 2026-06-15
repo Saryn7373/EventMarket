@@ -433,11 +433,14 @@ export interface ReviewAuthor {
   avatar: string | null
 }
 
+export type ReviewStatus = 'pending' | 'approved' | 'rejected'
+
 export interface VenueReview {
   id: string
   renter: ReviewAuthor
   rating: number
   comment: string
+  status: ReviewStatus
   created_at: string
   updated_at: string
 }
@@ -447,6 +450,7 @@ export interface SpecialistReview {
   renter: ReviewAuthor
   rating: number
   comment: string
+  status: ReviewStatus
   created_at: string
   updated_at: string
 }
@@ -459,4 +463,55 @@ export interface ReviewEligibility<T> {
 export interface ReviewPayload {
   rating: number
   comment: string
+}
+
+// ============================================
+// Администрирование
+// ============================================
+
+export interface AdminUserItem {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  role: UserRole
+  role_display: string
+  is_admin: boolean
+  is_active: boolean
+  is_superuser: boolean
+  date_joined: string
+}
+
+export interface AdminReview {
+  id: string
+  type: 'venue' | 'specialist'
+  target: string
+  target_id: string
+  author: string
+  rating: number
+  comment: string
+  status: ReviewStatus
+  created_at: string
+}
+
+export interface AnalyticsVenue {
+  id: string
+  name: string
+  city: string
+  slug: string
+  completed_bookings: number
+}
+
+export interface AnalyticsSpecialist {
+  id: string
+  first_name: string
+  last_name: string
+  specialty: string
+  city: string
+  completed_hires: number
+}
+
+export interface AdminAnalytics {
+  top_venues: AnalyticsVenue[]
+  top_specialists: AnalyticsSpecialist[]
 }

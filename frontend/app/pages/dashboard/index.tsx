@@ -27,6 +27,7 @@ import UiInput from '~/components/ui/Input'
 import UiSelect from '~/components/ui/Select'
 import UiAlert from '~/components/ui/Alert'
 import UiButton from '~/components/ui/Button'
+import AdminPanel from '~/components/AdminPanel'
 
 definePageMeta({ middleware: 'auth' })
 
@@ -1271,7 +1272,7 @@ export default defineComponent({
       renter:    { title: 'Мои мероприятия',  subtitle: 'Создавайте мероприятия, бронируйте площадки и нанимайте специалистов' },
       owner:     { title: 'Мои площадки',     subtitle: 'Управляйте площадками и отслеживайте бронирования' },
       specialist:{ title: 'Мои наймы',        subtitle: 'Мероприятия, на которые вас пригласили' },
-      admin:     { title: 'Дашборд',          subtitle: 'Администрирование платформы' },
+      admin:     { title: 'Администрирование', subtitle: 'Управление отзывами, пользователями и аналитика платформы' },
       unknown:   { title: 'Дашборд',          subtitle: 'Профиль без роли — обратитесь к администратору' },
     }
 
@@ -1310,7 +1311,8 @@ export default defineComponent({
                 {userRole.value === 'renter'     && renderRenter()}
                 {userRole.value === 'owner'      && renderOwner()}
                 {userRole.value === 'specialist' && renderSpecialist()}
-                {(userRole.value === 'admin' || userRole.value === 'unknown') && (
+                {userRole.value === 'admin' && <AdminPanel />}
+                {userRole.value === 'unknown' && (
                   <div class="empty-state">
                     <p>Для вашей роли дашборд пока не настроен.</p>
                   </div>

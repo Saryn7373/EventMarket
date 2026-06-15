@@ -240,6 +240,7 @@ class Command(BaseCommand):
                 defaults={
                     'rating': random.randint(3, 5),
                     'comment': fake.text(max_nb_chars=200),
+                    'status': 'approved',
                 },
             )
             venue_count += 1
@@ -262,6 +263,7 @@ class Command(BaseCommand):
                 defaults={
                     'rating': random.randint(3, 5),
                     'comment': fake.text(max_nb_chars=200),
+                    'status': 'approved',
                 },
             )
             specialist_count += 1

@@ -5,15 +5,33 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+REVIEW_STATUS_CHOICES = [
+    ('pending', _("на проверке")),
+    ('approved', _("опубликован")),
+    ('rejected', _("отклонён")),
+]
+
+
 class VenueReview(models.Model):
     """
     Отзыв арендатора о площадке.
 
     Оставить можно только если у арендатора есть завершённое
     бронирование этой площадки (см. reviews.validators).
+
+    Перед публикацией отзыв проходит проверку администратором
+    (status='pending'); публично виден только при status='approved'.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    status = models.CharField(
+        _("статус модерации"),
+        max_length=20,
+        choices=REVIEW_STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+    )
 
     venue = models.ForeignKey(
         'venues.Venue',
@@ -59,9 +77,20 @@ class SpecialistReview(models.Model):
     Оставить можно только если есть мероприятие, организованное этим
     арендатором, в котором у специалиста был завершённый найм
     (см. reviews.validators).
+
+    Перед публикацией отзыв проходит проверку администратором
+    (status='pending'); публично виден только при status='approved'.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    status = models.CharField(
+        _("статус модерации"),
+        max_length=20,
+        choices=REVIEW_STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+    )
 
     specialist = models.ForeignKey(
         'users.Specialist',

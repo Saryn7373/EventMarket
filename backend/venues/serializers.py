@@ -65,11 +65,11 @@ class VenueDetailSerializer(serializers.ModelSerializer):
         return obj.bookings.filter(status__in=['pending', 'confirmed']).exists()
 
     def get_rating(self, obj):
-        avg = obj.reviews.aggregate(avg=Avg('rating'))['avg']
+        avg = obj.reviews.filter(status='approved').aggregate(avg=Avg('rating'))['avg']
         return round(avg, 2) if avg is not None else 0.0
 
     def get_reviews_count(self, obj):
-        return obj.reviews.count()
+        return obj.reviews.filter(status='approved').count()
 
 
 class VenueWriteSerializer(serializers.ModelSerializer):

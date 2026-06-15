@@ -23,6 +23,7 @@ export default defineNuxtConfig({
     '~/pages/auth/login.css',
     '~/pages/auth/register.css',
     '~/pages/dashboard/index.css',
+    '~/components/AdminPanel.css',
     '~/pages/profile/index.css',
     '~/pages/events/[id].css',
     '~/pages/venues/index.css',

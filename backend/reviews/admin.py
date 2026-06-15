@@ -3,13 +3,26 @@ from django.contrib import admin
 from .models import SpecialistReview, VenueReview
 
 
+@admin.action(description="Одобрить (опубликовать) выбранные отзывы")
+def approve_reviews(modeladmin, request, queryset):
+    updated = queryset.update(status='approved')
+    modeladmin.message_user(request, f"Опубликовано отзывов: {updated}")
+
+
+@admin.action(description="Отклонить выбранные отзывы")
+def reject_reviews(modeladmin, request, queryset):
+    updated = queryset.update(status='rejected')
+    modeladmin.message_user(request, f"Отклонено отзывов: {updated}")
+
+
 @admin.register(VenueReview)
 class VenueReviewAdmin(admin.ModelAdmin):
-    list_display = ['short_id', 'venue', 'renter_email', 'rating', 'created_at']
-    list_filter = ['rating', 'created_at']
+    list_display = ['short_id', 'venue', 'renter_email', 'rating', 'status', 'created_at']
+    list_filter = ['status', 'rating', 'created_at']
     search_fields = ['venue__name', 'renter__user__email']
     raw_id_fields = ['venue', 'renter']
     ordering = ['-created_at']
+    actions = [approve_reviews, reject_reviews]
 
     @admin.display(description='ID')
     def short_id(self, obj):
@@ -25,11 +38,12 @@ class VenueReviewAdmin(admin.ModelAdmin):
 
 @admin.register(SpecialistReview)
 class SpecialistReviewAdmin(admin.ModelAdmin):
-    list_display = ['short_id', 'specialist_name', 'renter_email', 'rating', 'created_at']
-    list_filter = ['rating', 'created_at']
+    list_display = ['short_id', 'specialist_name', 'renter_email', 'rating', 'status', 'created_at']
+    list_filter = ['status', 'rating', 'created_at']
     search_fields = ['specialist__user__email', 'renter__user__email']
     raw_id_fields = ['specialist', 'renter']
     ordering = ['-created_at']
+    actions = [approve_reviews, reject_reviews]
 
     @admin.display(description='ID')
     def short_id(self, obj):

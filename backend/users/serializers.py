@@ -69,7 +69,7 @@ class MeSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'email', 'role', 'role_display', 'date_joined', 'avatar']
 
     def get_role(self, obj):
-        if obj.is_superuser or obj.is_staff:
+        if obj.is_admin:
             return 'admin'
         if obj.is_renter:
             return 'renter'
@@ -138,7 +138,7 @@ class SpecialistDetailSerializer(serializers.ModelSerializer):
             return None
 
     def get_reviews_count(self, obj):
-        return obj.reviews.count()
+        return obj.reviews.filter(status='approved').count()
 
 
 class SpecialistListSerializer(serializers.ModelSerializer):
@@ -158,6 +158,39 @@ class SpecialistListSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(url) if request else url
         except Exception:
             return None
+
+
+# ────────────────────────────────────────────────
+# Администрирование: управление пользователями
+# ────────────────────────────────────────────────
+
+class AdminUserSerializer(serializers.ModelSerializer):
+    """Представление пользователя в списке для администратора."""
+    role = serializers.SerializerMethodField()
+    role_display = serializers.SerializerMethodField()
+    is_admin = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = BaseUser
+        fields = [
+            'id', 'email', 'first_name', 'last_name',
+            'role', 'role_display', 'is_admin', 'is_active',
+            'is_superuser', 'date_joined',
+        ]
+
+    def get_role(self, obj):
+        if obj.is_admin:      return 'admin'
+        if obj.is_renter:     return 'renter'
+        if obj.is_owner:      return 'owner'
+        if obj.is_specialist: return 'specialist'
+        return 'unknown'
+
+    def get_role_display(self, obj):
+        return {
+            'renter': 'Арендатор', 'owner': 'Владелец',
+            'specialist': 'Специалист', 'admin': 'Администратор',
+            'unknown': 'Без роли',
+        }[self.get_role(obj)]
 
 
 class ChangePasswordSerializer(serializers.Serializer):

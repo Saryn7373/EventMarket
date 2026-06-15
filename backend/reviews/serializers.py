@@ -34,7 +34,7 @@ class VenueReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = VenueReview
-        fields = ["id", "renter", "rating", "comment", "created_at", "updated_at"]
+        fields = ["id", "renter", "rating", "comment", "status", "created_at", "updated_at"]
         read_only_fields = fields
 
 
@@ -59,6 +59,8 @@ class VenueReviewCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         renter = self.context["request"].user.renter
         venue = self.context["venue"]
+        # Новый/изменённый отзыв снова уходит на проверку администратору.
+        validated_data["status"] = "pending"
         review, _created = VenueReview.objects.update_or_create(
             venue=venue, renter=renter, defaults=validated_data,
         )
@@ -76,7 +78,7 @@ class SpecialistReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SpecialistReview
-        fields = ["id", "renter", "rating", "comment", "created_at", "updated_at"]
+        fields = ["id", "renter", "rating", "comment", "status", "created_at", "updated_at"]
         read_only_fields = fields
 
 
@@ -101,7 +103,56 @@ class SpecialistReviewCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         renter = self.context["request"].user.renter
         specialist = self.context["specialist"]
+        # Новый/изменённый отзыв снова уходит на проверку администратору.
+        validated_data["status"] = "pending"
         review, _created = SpecialistReview.objects.update_or_create(
             specialist=specialist, renter=renter, defaults=validated_data,
         )
         return review
+
+
+# ─────────────────────────────────────────────────────────────
+# Модерация отзывов (администратор)
+# ─────────────────────────────────────────────────────────────
+
+class AdminReviewSerializer(serializers.Serializer):
+    """
+    Единое представление отзыва для модерации.
+
+    Подходит и для отзывов о площадках, и о специалистах — поле `type`
+    различает их, `target` содержит человекочитаемое название объекта.
+    """
+
+    id = serializers.UUIDField(read_only=True)
+    type = serializers.SerializerMethodField()
+    target = serializers.SerializerMethodField()
+    target_id = serializers.SerializerMethodField()
+    author = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(read_only=True)
+    comment = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_type(self, obj):
+        return "venue" if isinstance(obj, VenueReview) else "specialist"
+
+    def get_target(self, obj):
+        if isinstance(obj, VenueReview):
+            return obj.venue.name
+        name = f"{obj.specialist.user.first_name} {obj.specialist.user.last_name}".strip()
+        return name or obj.specialist.user.email
+
+    def get_target_id(self, obj):
+        if isinstance(obj, VenueReview):
+            return str(obj.venue_id)
+        return str(obj.specialist_id)
+
+    def get_author(self, obj):
+        name = f"{obj.renter.user.first_name} {obj.renter.user.last_name}".strip()
+        return name or obj.renter.user.email
+
+
+class ModerateReviewSerializer(serializers.Serializer):
+    """Принимает решение модерации: approve / reject."""
+
+    action = serializers.ChoiceField(choices=["approve", "reject"])
