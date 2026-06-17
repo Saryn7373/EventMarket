@@ -5,7 +5,8 @@ from hires.models import Hire
 
 
 @shared_task
-def update_expired_statuses():
+def update_expired_statuses() -> dict[str, int]:
+    """Переводит просроченные бронирования/найм в completed или cancelled по дате окончания."""
     now = timezone.now()
 
     bookings_completed = Booking.objects.filter(

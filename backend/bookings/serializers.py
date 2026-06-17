@@ -112,7 +112,8 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         model = Booking
         fields = ["venue", "event", "start_datetime", "end_datetime"]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет дату, статус площадки и принадлежность мероприятия арендатору."""
         venue = data["venue"]
         start_dt = data["start_datetime"]
         end_dt = data["end_datetime"]
@@ -139,7 +140,8 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         # 4. Доступность площадки проверяется в save() внутри транзакции
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Booking:
+        """Создаёт бронь внутри транзакции с блокировкой конкурирующих строк площадки."""
         from django.db import transaction
         from bookings.models import Booking
 
@@ -178,7 +180,8 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
         model = Booking
         fields = ["start_datetime", "end_datetime"]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет новые даты брони на корректность."""
         instance = self.instance
         venue = instance.venue
         start_dt = data.get("start_datetime", instance.start_datetime)
@@ -187,7 +190,8 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
         validate_booking_datetimes(start_dt, end_dt, venue)
         return data
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Booking, validated_data: dict) -> Booking:
+        """Обновляет даты брони и пересчитывает стоимость внутри транзакции."""
         from django.db import transaction
         from bookings.models import Booking
 
@@ -217,7 +221,8 @@ class BookingUpdateSerializer(serializers.ModelSerializer):
 class BookingStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Booking.STATUS_CHOICES)
 
-    def validate_status(self, new_status):
+    def validate_status(self, new_status: str) -> str:
+        """Проверяет допустимость перехода статуса и права пользователя на него."""
         from .validators import validate_status_transition, validate_status_transition_permissions
 
         booking = self.context["booking"]
@@ -228,7 +233,8 @@ class BookingStatusSerializer(serializers.Serializer):
 
         return new_status
 
-    def save(self):
+    def save(self) -> Booking:
+        """Сохраняет новый статус брони."""
         booking = self.context["booking"]
         booking.status = self.validated_data["status"]
         booking.save(update_fields=["status", "updated_at"])

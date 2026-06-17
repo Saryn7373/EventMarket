@@ -1,8 +1,14 @@
+from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
+
+if TYPE_CHECKING:
+    from hires.models import Hire
+    from users.models import BaseUser, Renter, Specialist
 
 
 # ─────────────────────────────────────────────────────────────
@@ -25,7 +31,7 @@ ALLOWED_TRANSITIONS: dict[str, list[str]] = {
 # Даты / время
 # ─────────────────────────────────────────────────────────────
 
-def validate_hire_datetimes(start_dt, end_dt) -> None:
+def validate_hire_datetimes(start_dt: datetime, end_dt: datetime) -> None:
     """
     Проверяет корректность дат:
     - start < end
@@ -46,7 +52,9 @@ def validate_hire_datetimes(start_dt, end_dt) -> None:
 # Доступность специалиста (без блокировки БД — только проверка)
 # ─────────────────────────────────────────────────────────────
 
-def validate_specialist_availability(specialist, start_dt, end_dt, exclude_hire_id=None) -> None:
+def validate_specialist_availability(
+    specialist: "Specialist", start_dt: datetime, end_dt: datetime, exclude_hire_id=None
+) -> None:
     """
     Проверяет, что специалист свободен в заданный интервал.
 
@@ -74,7 +82,7 @@ def validate_specialist_availability(specialist, start_dt, end_dt, exclude_hire_
 # Расчёт цены
 # ─────────────────────────────────────────────────────────────
 
-def calculate_hire_price(specialist, start_dt, end_dt) -> Decimal:
+def calculate_hire_price(specialist: "Specialist", start_dt: datetime, end_dt: datetime) -> Decimal:
     """
     Рассчитывает стоимость найма специалиста.
 
@@ -105,7 +113,7 @@ def calculate_hire_price(specialist, start_dt, end_dt) -> Decimal:
 # Принадлежность мероприятия арендатору
 # ─────────────────────────────────────────────────────────────
 
-def validate_event_belongs_to_renter(event, renter) -> None:
+def validate_event_belongs_to_renter(event, renter: "Renter") -> None:
     """Арендатор может нанимать специалистов только для своих мероприятий."""
     if event.renter_id != renter.pk:
         raise ValidationError(
@@ -131,7 +139,7 @@ def validate_status_transition(current_status: str, new_status: str) -> None:
         )
 
 
-def validate_status_transition_permissions(hire, new_status: str, user) -> None:
+def validate_status_transition_permissions(hire: "Hire", new_status: str, user: "BaseUser") -> None:
     """
     Проверяет, что именно этот пользователь вправе совершить данный переход.
 

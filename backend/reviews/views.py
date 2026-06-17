@@ -1,6 +1,8 @@
+from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -34,30 +36,36 @@ class VenueReviewListCreateView(generics.ListCreateAPIView):
 
     pagination_class = StandardPagination
 
-    def get_venue(self):
+    def get_venue(self) -> Venue:
+        """Возвращает площадку, к которой относятся отзывы, по venue_id из URL."""
         return get_object_or_404(Venue, pk=self.kwargs["venue_id"])
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[VenueReview]:
+        """Возвращает только опубликованные отзывы о данной площадке."""
         return VenueReview.objects.filter(
             venue_id=self.kwargs["venue_id"], status="approved",
         ).select_related("renter__user", "renter__user__avatar")
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор создания для POST, иначе сериализатор чтения."""
         if self.request.method == "POST":
             return VenueReviewCreateSerializer
         return VenueReviewSerializer
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Оставлять отзыв может только Renter, читать список — любой пользователь."""
         if self.request.method == "POST":
             return [IsRenter()]
         return [AllowAny()]
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict:
+        """Добавляет в контекст сериализатора площадку из URL."""
         context = super().get_serializer_context()
         context["venue"] = self.get_venue()
         return context
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Создаёт/обновляет отзыв и возвращает его представление для чтения."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         review = serializer.save()
@@ -77,7 +85,8 @@ class VenueReviewEligibilityView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, venue_id):
+    def get(self, request: Request, venue_id) -> Response:
+        """Возвращает признак возможности оставить отзыв и существующий отзыв пользователя, если есть."""
         venue = get_object_or_404(Venue, pk=venue_id)
 
         if not hasattr(request.user, "renter"):
@@ -106,30 +115,36 @@ class SpecialistReviewListCreateView(generics.ListCreateAPIView):
 
     pagination_class = StandardPagination
 
-    def get_specialist(self):
+    def get_specialist(self) -> Specialist:
+        """Возвращает специалиста, к которому относятся отзывы, по specialist_id из URL."""
         return get_object_or_404(Specialist, user_id=self.kwargs["specialist_id"])
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[SpecialistReview]:
+        """Возвращает только опубликованные отзывы о данном специалисте."""
         return SpecialistReview.objects.filter(
             specialist__user_id=self.kwargs["specialist_id"], status="approved",
         ).select_related("renter__user", "renter__user__avatar")
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор создания для POST, иначе сериализатор чтения."""
         if self.request.method == "POST":
             return SpecialistReviewCreateSerializer
         return SpecialistReviewSerializer
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Оставлять отзыв может только Renter, читать список — любой пользователь."""
         if self.request.method == "POST":
             return [IsRenter()]
         return [AllowAny()]
 
-    def get_serializer_context(self):
+    def get_serializer_context(self) -> dict:
+        """Добавляет в контекст сериализатора специалиста из URL."""
         context = super().get_serializer_context()
         context["specialist"] = self.get_specialist()
         return context
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Создаёт/обновляет отзыв и возвращает его представление для чтения."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         review = serializer.save()
@@ -149,7 +164,8 @@ class SpecialistReviewEligibilityView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, specialist_id):
+    def get(self, request: Request, specialist_id) -> Response:
+        """Возвращает признак возможности оставить отзыв и существующий отзыв пользователя, если есть."""
         specialist = get_object_or_404(Specialist, user_id=specialist_id)
 
         if not hasattr(request.user, "renter"):
@@ -178,7 +194,8 @@ class AdminReviewListView(APIView):
 
     permission_classes = [IsAdmin]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
+        """Возвращает объединённый и отсортированный по дате список отзывов для модерации."""
         status_filter = request.query_params.get("status", "pending")
 
         venue_qs = VenueReview.objects.select_related("venue", "renter__user")
@@ -199,7 +216,8 @@ class AdminVenueReviewModerateView(APIView):
 
     permission_classes = [IsAdmin]
 
-    def post(self, request, pk):
+    def post(self, request: Request, pk) -> Response:
+        """Применяет решение модерации (approve/reject) к отзыву о площадке."""
         review = get_object_or_404(VenueReview, pk=pk)
         return _moderate(request, review)
 
@@ -209,12 +227,14 @@ class AdminSpecialistReviewModerateView(APIView):
 
     permission_classes = [IsAdmin]
 
-    def post(self, request, pk):
+    def post(self, request: Request, pk) -> Response:
+        """Применяет решение модерации (approve/reject) к отзыву о специалисте."""
         review = get_object_or_404(SpecialistReview, pk=pk)
         return _moderate(request, review)
 
 
-def _moderate(request, review):
+def _moderate(request: Request, review: VenueReview | SpecialistReview) -> Response:
+    """Меняет статус отзыва на approved/rejected согласно решению модератора."""
     serializer = ModerateReviewSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     action = serializer.validated_data["action"]

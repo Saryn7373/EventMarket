@@ -9,7 +9,8 @@ from bookings.models import Booking
 class Command(BaseCommand):
     help = 'Демонстрация values() и values_list()'
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options) -> None:
+        """Печатает примеры использования values() и values_list() на моделях проекта."""
 
         # values() → список словарей
         self.stdout.write('\n--- values() ---')

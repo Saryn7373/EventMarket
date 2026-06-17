@@ -1,5 +1,7 @@
+from django.db.models import QuerySet
 from rest_framework import generics, filters, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -28,7 +30,8 @@ class BookingListCreateView(generics.ListCreateAPIView):
     ordering_fields = ["start_datetime", "total_price", "created_at"]
     ordering = ["-created_at"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Booking]:
+        """Возвращает брони текущего пользователя: свои — для Renter, по своим площадкам — для Owner."""
         user = self.request.user
 
         qs = Booking.objects.select_related(
@@ -47,17 +50,20 @@ class BookingListCreateView(generics.ListCreateAPIView):
 
         return qs.none()
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор создания для POST, иначе сериализатор списка."""
         if self.request.method == "POST":
             return BookingCreateSerializer
         return BookingListSerializer
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Создавать бронь может только Renter, читать список — любой авторизованный."""
         if self.request.method == "POST":
             return [IsRenter()]
         return [IsAuthenticated()]
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Создаёт бронь и возвращает её детальное представление."""
         serializer = BookingCreateSerializer(
             data=request.data, context={"request": request}
         )
@@ -84,17 +90,20 @@ class BookingRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         "renter__user",
     )
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Читать может любой участник брони, изменять — только при праве на модификацию."""
         if self.request.method == "GET":
             return [IsBookingParticipant()]
         return [IsBookingParticipant(), CanModifyBooking()]
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор обновления для PATCH, иначе детальный сериализатор."""
         if self.request.method == "PATCH":
             return BookingUpdateSerializer
         return BookingDetailSerializer
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args, **kwargs) -> Response:
+        """Обновляет даты брони и возвращает её детальное представление."""
         booking = self.get_object()
         serializer = BookingUpdateSerializer(
             booking, data=request.data, partial=True, context={"request": request}
@@ -103,7 +112,7 @@ class BookingRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         updated = serializer.save()
         return Response(BookingDetailSerializer(updated).data)
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
         """
         Физически удалять брони не стоит — меняем статус на cancelled.
         Удаление разрешено только если бронь ещё pending.
@@ -126,7 +135,8 @@ class BookingRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 class BookingStatusView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, pk):
+    def get_object(self, pk) -> Booking:
+        """Возвращает бронь по pk с проверкой прав доступа объекта."""
         from django.shortcuts import get_object_or_404
 
         booking = get_object_or_404(
@@ -136,7 +146,8 @@ class BookingStatusView(APIView):
         self.check_object_permissions(self.request, booking)
         return booking
 
-    def patch(self, request, pk):
+    def patch(self, request: Request, pk) -> Response:
+        """Меняет статус брони согласно конечному автомату переходов."""
         booking = self.get_object(pk)
 
         serializer = BookingStatusSerializer(
@@ -162,7 +173,8 @@ class MyBookingsView(generics.ListAPIView):
     ordering_fields = ["start_datetime", "total_price", "created_at"]
     ordering = ["-created_at"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Booking]:
+        """Возвращает брони текущего пользователя: свои — для Renter, по своим площадкам — для Owner."""
         user = self.request.user
         qs = Booking.objects.select_related("venue__owner__user", "event", "renter__user")
 
@@ -186,7 +198,8 @@ class VenueAvailabilityView(APIView):
         ?from=2025-06-01&to=2025-06-30
     """
 
-    def get(self, request, venue_id):
+    def get(self, request: Request, venue_id) -> Response:
+        """Возвращает список занятых интервалов площадки, опционально ограниченный диапазоном дат."""
         from datetime import datetime
         from django.shortcuts import get_object_or_404
         from venues.models import Venue

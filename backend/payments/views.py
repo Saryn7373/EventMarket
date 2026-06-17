@@ -1,5 +1,7 @@
+from django.db.models import QuerySet
 from rest_framework import generics, filters, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -34,7 +36,8 @@ class PaymentListCreateView(generics.ListCreateAPIView):
     ordering_fields = ["created_at", "paid_at", "amount"]
     ordering = ["-created_at"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Payment]:
+        """Возвращает платежи текущего пользователя: свои — для Renter, все — для администратора."""
         user = self.request.user
         qs = Payment.objects.select_related("payer__user", "booking__venue", "booking__event", "hire__specialist__user")
 
@@ -48,17 +51,20 @@ class PaymentListCreateView(generics.ListCreateAPIView):
 
         return qs.none()
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор создания для POST, иначе сериализатор списка."""
         if self.request.method == "POST":
             return PaymentCreateSerializer
         return PaymentListSerializer
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Создавать платёж может только Renter, читать список — любой авторизованный."""
         if self.request.method == "POST":
             return [IsRenter()]
         return [IsAuthenticated()]
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Создаёт платёж и проверяет готовность связанного объекта (бронь/найм) к оплате."""
         serializer = PaymentCreateSerializer(
             data=request.data, context={"request": request}
         )
@@ -105,7 +111,8 @@ class PaymentStatusView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, pk):
+    def get_object(self, pk) -> Payment:
+        """Возвращает платёж по pk с проверкой прав доступа объекта."""
         payment = get_object_or_404(
             Payment.objects.select_related("payer__user"),
             pk=pk,
@@ -113,7 +120,8 @@ class PaymentStatusView(APIView):
         self.check_object_permissions(self.request, payment)
         return payment
 
-    def patch(self, request, pk):
+    def patch(self, request: Request, pk) -> Response:
+        """Меняет статус платежа согласно конечному автомату переходов."""
         payment = self.get_object(pk)
 
         with transaction.atomic():
@@ -147,7 +155,8 @@ class MyPaymentsView(generics.ListAPIView):
     ordering_fields = ["created_at", "paid_at", "amount"]
     ordering = ["-created_at"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Payment]:
+        """Возвращает платежи текущего арендатора."""
         return Payment.objects.filter(
             payer=self.request.user.renter
         ).select_related("payer__user", "booking__venue", "booking__event", "hire__specialist__user")
@@ -161,7 +170,8 @@ class BookingPaymentsView(generics.ListAPIView):
     serializer_class = PaymentListSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Payment]:
+        """Возвращает платежи по бронированию для арендатора, владельца площадки или администратора."""
         from bookings.models import Booking
 
         booking_id = self.kwargs["booking_id"]
@@ -187,7 +197,8 @@ class HirePaymentsView(generics.ListAPIView):
     serializer_class = PaymentListSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Payment]:
+        """Возвращает платежи по найму для арендатора, специалиста или администратора."""
         from hires.models import Hire
 
         hire_id = self.kwargs["hire_id"]

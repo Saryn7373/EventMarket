@@ -21,7 +21,8 @@ fake = Faker('ru_RU')
 class Command(BaseCommand):
     help = 'Seed the database with fake data'
 
-    def add_arguments(self, parser):
+    def add_arguments(self, parser) -> None:
+        """Регистрирует параметры команды, задающие количество создаваемых объектов."""
         parser.add_argument('--renters',     type=int, default=10)
         parser.add_argument('--owners',      type=int, default=5)
         parser.add_argument('--specialists', type=int, default=5)
@@ -31,7 +32,8 @@ class Command(BaseCommand):
         parser.add_argument('--hires',       type=int, default=20)
         parser.add_argument('--clear',       action='store_true')
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options) -> None:
+        """Запускает полный цикл наполнения базы тестовыми данными во всех приложениях."""
         if options['clear']:
             self._clear()
 
@@ -47,7 +49,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('✅ Seeding complete!'))
 
-    def _clear(self):
+    def _clear(self) -> None:
+        """Удаляет все ранее созданные тестовые данные перед повторным наполнением."""
         VenueReview.objects.all().delete()
         SpecialistReview.objects.all().delete()
         Payment.objects.all().delete()
@@ -61,7 +64,8 @@ class Command(BaseCommand):
         BaseUser.objects.filter(is_superuser=False).delete()
         self.stdout.write(self.style.WARNING('🗑️  Database cleared'))
 
-    def _seed_renters(self, n):
+    def _seed_renters(self, n: int) -> list[Renter]:
+        """Создаёт n тестовых пользователей с профилем арендатора."""
         renters = []
         for _ in range(n):
             user = BaseUser.objects.create_user(
@@ -74,7 +78,8 @@ class Command(BaseCommand):
         self.stdout.write(f'  👤 Renters: {n}')
         return renters
 
-    def _seed_owners(self, n):
+    def _seed_owners(self, n: int) -> list[Owner]:
+        """Создаёт n тестовых пользователей с профилем владельца площадки."""
         owners = []
         for _ in range(n):
             user = BaseUser.objects.create_user(
@@ -92,7 +97,8 @@ class Command(BaseCommand):
         self.stdout.write(f'  👤 Owners: {n}')
         return owners
 
-    def _seed_specialists(self, n):
+    def _seed_specialists(self, n: int) -> list[Specialist]:
+        """Создаёт n тестовых пользователей с профилем специалиста."""
         specialties = ['Фотограф', 'DJ', 'Ведущий', 'Декоратор', 'Кейтеринг']
         specialists = []
         for _ in range(n):
@@ -113,7 +119,8 @@ class Command(BaseCommand):
         self.stdout.write(f'  👤 Specialists: {n}')
         return specialists
 
-    def _seed_venues(self, owners, n):
+    def _seed_venues(self, owners: list[Owner], n: int) -> list[Venue]:
+        """Создаёт n тестовых площадок, случайно распределённых между владельцами."""
         statuses = ['draft', 'published', 'published', 'moderation']
         venues = []
         for _ in range(n):
@@ -137,7 +144,8 @@ class Command(BaseCommand):
         self.stdout.write(f'  🏛️  Venues: {n}')
         return venues
 
-    def _seed_events(self, renters, n):
+    def _seed_events(self, renters: list[Renter], n: int) -> list[Event]:
+        """Создаёт n тестовых мероприятий, случайно распределённых между арендаторами."""
         themes   = [c[0] for c in Event.THEME_CHOICES]
         statuses = [c[0] for c in Event.STATUS_CHOICES]
         events = []
@@ -155,7 +163,10 @@ class Command(BaseCommand):
         self.stdout.write(f'  🎉 Events: {n}')
         return events
 
-    def _seed_bookings(self, events, venues, renters, n):
+    def _seed_bookings(
+        self, events: list[Event], venues: list[Venue], renters: list[Renter], n: int
+    ) -> list[Booking]:
+        """Создаёт n тестовых бронирований со случайными площадками, мероприятиями и сроками."""
         statuses = [c[0] for c in Booking.STATUS_CHOICES]
         bookings = []
         for _ in range(n):
@@ -175,7 +186,8 @@ class Command(BaseCommand):
         self.stdout.write(f'  📅 Bookings: {n}')
         return bookings
 
-    def _seed_hires(self, events, specialists, n):
+    def _seed_hires(self, events: list[Event], specialists: list[Specialist], n: int) -> list[Hire]:
+        """Создаёт n тестовых наймов специалистов со случайными мероприятиями и сроками."""
         statuses = [c[0] for c in Hire.STATUS_CHOICES]
         hires = []
         for _ in range(n):
@@ -194,7 +206,8 @@ class Command(BaseCommand):
         self.stdout.write(f'  🤝 Hires: {n}')
         return hires
 
-    def _seed_payments(self, renters, bookings, hires):
+    def _seed_payments(self, renters: list[Renter], bookings: list[Booking], hires: list[Hire]) -> None:
+        """Создаёт тестовые платежи по каждой брони и найму со случайным статусом."""
         from django.utils import timezone
         statuses = [c[0] for c in Payment.STATUS_CHOICES]
         count = 0
@@ -222,7 +235,8 @@ class Command(BaseCommand):
             count += 1
         self.stdout.write(f'  💳 Payments: {count}')
 
-    def _seed_reviews(self, bookings, hires):
+    def _seed_reviews(self, bookings: list[Booking], hires: list[Hire]) -> None:
+        """Создаёт тестовые отзывы для части завершённых бронирований и наймов."""
         venue_count = 0
         seen_venue_pairs = set()
         for booking in bookings:

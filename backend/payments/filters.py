@@ -1,3 +1,4 @@
+from django.db.models import QuerySet
 import django_filters
 from .models import Payment
 
@@ -49,7 +50,8 @@ class PaymentFilter(django_filters.FilterSet):
         model = Payment
         fields = ["status"]
 
-    def filter_is_paid(self, queryset, name, value):
+    def filter_is_paid(self, queryset: QuerySet[Payment], name: str, value: bool) -> QuerySet[Payment]:
+        """Фильтрует только успешно оплаченные платежи, если значение истинно."""
         if value:
             return queryset.filter(status="succeeded")
         return queryset

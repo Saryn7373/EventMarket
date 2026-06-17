@@ -1,4 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.request import Request
+from rest_framework.views import APIView
 
 
 class IsRenter(BasePermission):
@@ -6,7 +8,7 @@ class IsRenter(BasePermission):
 
     message = "Доступ разрешён только арендаторам."
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: APIView) -> bool:
         return request.user.is_authenticated and hasattr(request.user, "renter")
 
 
@@ -15,7 +17,7 @@ class IsOwnerUser(BasePermission):
 
     message = "Доступ разрешён только владельцам площадок."
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: APIView) -> bool:
         return request.user.is_authenticated and hasattr(request.user, "owner")
 
 
@@ -28,7 +30,7 @@ class IsBookingParticipant(BasePermission):
 
     message = "У вас нет доступа к этому бронированию."
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request: Request, view: APIView, obj) -> bool:
         user = request.user
         is_renter = hasattr(user, "renter") and obj.renter == user.renter
         is_venue_owner = hasattr(user, "owner") and obj.venue.owner == user.owner
@@ -43,7 +45,7 @@ class CanModifyBooking(BasePermission):
 
     message = "Изменить бронирование нельзя — оно уже подтверждено или завершено."
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request: Request, view: APIView, obj) -> bool:
         if request.method in SAFE_METHODS:
             return True
         user = request.user

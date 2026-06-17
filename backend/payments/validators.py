@@ -1,9 +1,16 @@
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from bookings.models import Booking
+    from hires.models import Hire
+    from payments.models import Payment
+    from users.models import BaseUser
 
 
-def validate_payment_target(booking, hire):
+def validate_payment_target(booking: "Booking | None", hire: "Hire | None") -> None:
     """
     Платёж должен быть привязан ровно к одному объекту: Booking или Hire.
     """
@@ -17,7 +24,7 @@ def validate_payment_target(booking, hire):
         )
 
 
-def validate_status_transition(current_status, new_status):
+def validate_status_transition(current_status: str, new_status: str) -> None:
     """
     Проверка допустимых переходов статусов платежа.
 
@@ -47,7 +54,7 @@ def validate_status_transition(current_status, new_status):
         )
 
 
-def validate_status_transition_permissions(payment, new_status, user):
+def validate_status_transition_permissions(payment: "Payment", new_status: str, user: "BaseUser") -> None:
     """
     Проверка: пользователь имеет право менять статус платежа.
 
@@ -63,7 +70,7 @@ def validate_status_transition_permissions(payment, new_status, user):
         )
 
 
-def calculate_payment_amount(booking=None, hire=None):
+def calculate_payment_amount(booking: "Booking | None" = None, hire: "Hire | None" = None) -> Decimal:
     """
     Рассчитать сумму платежа из total_price связанного объекта.
 
@@ -76,7 +83,7 @@ def calculate_payment_amount(booking=None, hire=None):
     return Decimal("0.00")
 
 
-def validate_booking_payment(booking):
+def validate_booking_payment(booking: "Booking") -> None:
     """
     Проверка: бронирование готово к оплате.
 
@@ -99,7 +106,7 @@ def validate_booking_payment(booking):
         )
 
 
-def validate_hire_payment(hire):
+def validate_hire_payment(hire: "Hire") -> None:
     """
     Проверка: найм готов к оплате.
 

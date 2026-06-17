@@ -1,4 +1,5 @@
 import django_filters
+from django.db.models import QuerySet
 from django.utils import timezone
 from datetime import datetime
 from .models import Event
@@ -50,13 +51,15 @@ class EventFilter(django_filters.FilterSet):
         model = Event
         fields = ['date', 'theme', 'status']
 
-    def filter_upcoming(self, queryset, name, value):
+    def filter_upcoming(self, queryset: QuerySet[Event], name: str, value: bool) -> QuerySet[Event]:
+        """Оставляет только мероприятия с датой не раньше сегодня"""
         if value:
             today = timezone.now().date()
             return queryset.filter(date__gte=today)
         return queryset
 
-    def filter_today(self, queryset, name, value):
+    def filter_today(self, queryset: QuerySet[Event], name: str, value: bool) -> QuerySet[Event]:
+        """Оставляет только мероприятия, назначенные на сегодня"""
         if value:
             today = timezone.now().date()
             return queryset.filter(date=today)

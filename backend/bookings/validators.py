@@ -1,7 +1,14 @@
+from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
+
+if TYPE_CHECKING:
+    from bookings.models import Booking
+    from users.models import BaseUser, Renter
+    from venues.models import Venue
 
 
 # ─────────────────────────────────────────────────────────────
@@ -24,7 +31,7 @@ ALLOWED_TRANSITIONS: dict[str, list[str]] = {
 # Даты / время
 # ─────────────────────────────────────────────────────────────
 
-def validate_booking_datetimes(start_dt, end_dt, venue) -> None:
+def validate_booking_datetimes(start_dt: datetime, end_dt: datetime, venue: "Venue") -> None:
     """
     Проверяет корректность дат:
     - start < end
@@ -58,7 +65,9 @@ def validate_booking_datetimes(start_dt, end_dt, venue) -> None:
 # Доступность площадки (без блокировки БД — только проверка)
 # ─────────────────────────────────────────────────────────────
 
-def validate_venue_availability(venue, start_dt, end_dt, exclude_booking_id=None) -> None:
+def validate_venue_availability(
+    venue: "Venue", start_dt: datetime, end_dt: datetime, exclude_booking_id=None
+) -> None:
     """
     Проверяет, что площадка свободна в заданный интервал.
 
@@ -86,7 +95,7 @@ def validate_venue_availability(venue, start_dt, end_dt, exclude_booking_id=None
 # Расчёт цены
 # ─────────────────────────────────────────────────────────────
 
-def calculate_booking_price(venue, start_dt, end_dt) -> Decimal:
+def calculate_booking_price(venue: "Venue", start_dt: datetime, end_dt: datetime) -> Decimal:
     """
     Рассчитывает стоимость брони по тарифу площадки.
 
@@ -118,7 +127,7 @@ def calculate_booking_price(venue, start_dt, end_dt) -> Decimal:
 # Принадлежность мероприятия арендатору
 # ─────────────────────────────────────────────────────────────
 
-def validate_event_belongs_to_renter(event, renter) -> None:
+def validate_event_belongs_to_renter(event, renter: "Renter") -> None:
     """Арендатор может бронировать только для своих мероприятий."""
     if event.renter_id != renter.pk:
         raise ValidationError(
@@ -144,7 +153,7 @@ def validate_status_transition(current_status: str, new_status: str) -> None:
         )
 
 
-def validate_status_transition_permissions(booking, new_status: str, user) -> None:
+def validate_status_transition_permissions(booking: "Booking", new_status: str, user: "BaseUser") -> None:
     """
     Проверяет, что именно этот пользователь вправе совершить данный переход.
 

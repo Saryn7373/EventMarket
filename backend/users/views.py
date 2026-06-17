@@ -1,8 +1,9 @@
-from django.db.models import Count, Q
+from django.db.models import Count, Q, QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, filters, status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -33,7 +34,8 @@ class RegisterView(APIView):
     """POST /api/auth/register/ — регистрация нового пользователя"""
     permission_classes = [AllowAny]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
+        """Регистрирует пользователя и сразу выдаёт пару JWT-токенов."""
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -54,7 +56,8 @@ class LogoutView(APIView):
     """POST /api/auth/logout/ — занести refresh-токен в чёрный список"""
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
+        """Отзывает refresh-токен, добавляя его в чёрный список."""
         try:
             refresh_token = request.data["refresh"]
             token = RefreshToken(refresh_token)
@@ -69,11 +72,13 @@ class MeView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
+        """Возвращает профиль текущего пользователя."""
         serializer = MeSerializer(request.user, context={'request': request})
         return Response(serializer.data)
 
-    def patch(self, request):
+    def patch(self, request: Request) -> Response:
+        """Частично обновляет профиль текущего пользователя (включая аватар)."""
         serializer = MeSerializer(request.user, data=request.data, partial=True, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -84,7 +89,8 @@ class ChangePasswordView(APIView):
     """POST /api/auth/change-password/ — смена пароля"""
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
+        """Меняет пароль текущего пользователя после проверки старого пароля."""
         serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -95,7 +101,8 @@ class TopOrganizersView(APIView):
     """GET /api/auth/top-organizers/ — топ-3 арендатора по числу проведённых мероприятий"""
     permission_classes = [AllowAny]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
+        """Возвращает топ-3 арендатора по числу завершённых мероприятий."""
         top = (
             Renter.objects
             .annotate(completed_count=Count('events', filter=Q(events__status='completed')))
@@ -132,7 +139,8 @@ class SpecialistListView(generics.ListAPIView):
     ordering_fields = ['rating', 'user__first_name', 'user__last_name']
     ordering = ['-rating']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Specialist]:
+        """Возвращает всех специалистов с подгруженным пользователем и аватаром."""
         return Specialist.objects.select_related('user', 'user__avatar').all()
 
 
@@ -141,7 +149,8 @@ class SpecialistDetailView(generics.RetrieveAPIView):
     serializer_class = SpecialistDetailSerializer
     permission_classes = [AllowAny]
 
-    def get_object(self):
+    def get_object(self) -> Specialist:
+        """Возвращает специалиста по id пользователя из URL."""
         return generics.get_object_or_404(
             Specialist.objects.select_related('user', 'user__avatar'),
             user__id=self.kwargs['pk'],
@@ -162,7 +171,8 @@ class AdminUserListView(generics.ListAPIView):
     ordering_fields = ['date_joined', 'email']
     ordering = ['-date_joined']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[BaseUser]:
+        """Возвращает всех пользователей с подгруженными профилями ролей."""
         return BaseUser.objects.select_related(
             'admin', 'renter', 'owner', 'specialist',
         ).all()
@@ -172,7 +182,8 @@ class AdminUserDetailView(APIView):
     """DELETE /api/auth/admin/users/<uuid:pk>/ — удалить пользователя (только админ)"""
     permission_classes = [IsAdmin]
 
-    def delete(self, request, pk):
+    def delete(self, request: Request, pk) -> Response:
+        """Удаляет пользователя, запрещая удаление себя и суперпользователей."""
         if str(request.user.id) == str(pk):
             return Response(
                 {"detail": "Нельзя удалить собственную учётную запись."},
@@ -195,7 +206,8 @@ class GrantAdminView(APIView):
     """
     permission_classes = [IsAdmin]
 
-    def post(self, request, pk):
+    def post(self, request: Request, pk) -> Response:
+        """Выдаёт пользователю профиль администратора и доступ в Django-админку."""
         target = get_object_or_404(BaseUser, pk=pk)
         if target.is_admin:
             return Response(
@@ -221,7 +233,8 @@ class AdminAnalyticsView(APIView):
     """
     permission_classes = [IsAdmin]
 
-    def get(self, request):
+    def get(self, request: Request) -> Response:
+        """Возвращает топ площадок и специалистов по количеству завершённых сделок."""
         from venues.models import Venue
 
         limit = int(request.query_params.get('limit', 10))

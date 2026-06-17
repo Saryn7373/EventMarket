@@ -1,6 +1,11 @@
+from typing import TYPE_CHECKING
+
 from rest_framework import serializers
 from django.utils import timezone
 from .models import Payment
+
+if TYPE_CHECKING:
+    from hires.models import Hire
 
 
 # ─────────────────────────────────────────────────────────────
@@ -22,7 +27,8 @@ class _HireShortSerializer(serializers.Serializer):
     event_date = serializers.DateField(source="event.date", read_only=True)
     total_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
 
-    def get_specialist_name(self, obj):
+    def get_specialist_name(self, obj: "Hire") -> str:
+        """Возвращает полное имя специалиста для отображения в платеже."""
         return f"{obj.specialist.user.first_name} {obj.specialist.user.last_name}".strip()
 
 
@@ -54,14 +60,16 @@ class PaymentListSerializer(serializers.ModelSerializer):
             "paid_at",
         ]
 
-    def get_target_type(self, obj):
+    def get_target_type(self, obj: Payment) -> str | None:
+        """Возвращает тип объекта, к которому привязан платёж: booking или hire."""
         if obj.booking:
             return "booking"
         if obj.hire:
             return "hire"
         return None
 
-    def get_target_id(self, obj):
+    def get_target_id(self, obj: Payment) -> "str | None":
+        """Возвращает идентификатор объекта, к которому привязан платёж."""
         if obj.booking:
             return obj.booking.id
         if obj.hire:
@@ -115,7 +123,8 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
         model = Payment
         fields = ["booking", "hire"]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет, что указан ровно один объект оплаты, у него нет активного платежа и он принадлежит арендатору."""
         from .validators import validate_payment_target
 
         booking = data.get("booking")
@@ -159,7 +168,8 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Payment:
+        """Создаёт платёж внутри транзакции, рассчитывая сумму на сервере."""
         from django.db import transaction
         from .validators import calculate_payment_amount
 
@@ -186,7 +196,8 @@ class PaymentCreateSerializer(serializers.ModelSerializer):
 class PaymentStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Payment.STATUS_CHOICES)
 
-    def validate_status(self, new_status):
+    def validate_status(self, new_status: str) -> str:
+        """Проверяет допустимость перехода в новый статус согласно конечному автомату."""
         from .validators import validate_status_transition
 
         payment = self.context["payment"]
@@ -194,7 +205,8 @@ class PaymentStatusSerializer(serializers.Serializer):
 
         return new_status
 
-    def save(self):
+    def save(self) -> Payment:
+        """Сохраняет новый статус платежа и фиксирует время оплаты при переходе в succeeded."""
         payment = self.context["payment"]
         old_status = payment.status
         payment.status = self.validated_data["status"]

@@ -106,22 +106,24 @@ class Event(models.Model):
     related_name='events',
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.title} — {self.date.strftime('%d.%m.%Y')}"
 
     @property
-    def is_upcoming(self):
+    def is_upcoming(self) -> bool:
+        """Мероприятие ещё не началось (с учётом времени начала)"""
         naive = datetime.combine(self.date, self.start_time or time.min)
         aware = timezone.make_aware(naive)
         return aware > timezone.now()
 
     @property
-    def is_today(self):
+    def is_today(self) -> bool:
         """Мероприятие сегодня"""
         return self.date == timezone.now().date()
 
     @property
-    def duration(self):
+    def duration(self) -> float | None:
+        """Продолжительность мероприятия в часах, если указано время начала и окончания"""
         if self.start_time and self.end_time:
             start = timezone.make_aware(
                 timezone.datetime.combine(self.date, self.start_time)

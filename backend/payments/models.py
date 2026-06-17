@@ -64,17 +64,19 @@ class Payment(models.Model):
         verbose_name_plural = _("платежи")
         ordering = ["-created_at"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         target = self.booking or self.hire or "—"
         return f"Платёж {self.id} — {self.amount} ₽ — {target}"
 
 
-    def clean(self):
+    def clean(self) -> None:
+        """Проверяет, что платёж привязан ровно к одному объекту: Booking или Hire."""
         if bool(self.booking) == bool(self.hire):
             raise ValidationError(
                 "Платёж должен быть привязан ровно к одному объекту: Booking или Hire."
             )
 
     @property
-    def is_paid(self):
+    def is_paid(self) -> bool:
+        """Признак того, что платёж успешно завершён."""
         return self.status == "succeeded"

@@ -1,5 +1,6 @@
 from django.db.models import Avg
 from rest_framework import serializers
+from rest_framework.request import Request
 from .models import Venue, VenueImage
 
 
@@ -25,11 +26,12 @@ class VenueListSerializer(serializers.ModelSerializer):
             'owner_email', 'main_photo',
         ]
 
-    def get_main_photo(self, obj):
+    def get_main_photo(self, obj: Venue) -> str | None:
+        """Возвращает абсолютный URL главного фото площадки, если оно задано."""
         url = obj.main_photo
         if not url:
             return None
-        request = self.context.get('request')
+        request: Request | None = self.context.get('request')
         if request:
             return request.build_absolute_uri(url)
         return url
@@ -61,14 +63,17 @@ class VenueDetailSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'slug', 'is_verified', 'created_at', 'updated_at', 'owner_email']
 
-    def get_has_active_bookings(self, obj):
+    def get_has_active_bookings(self, obj: Venue) -> bool:
+        """Проверяет, есть ли у площадки незавершённые бронирования."""
         return obj.bookings.filter(status__in=['pending', 'confirmed']).exists()
 
-    def get_rating(self, obj):
+    def get_rating(self, obj: Venue) -> float:
+        """Возвращает средний рейтинг по одобренным отзывам, округлённый до 2 знаков."""
         avg = obj.reviews.filter(status='approved').aggregate(avg=Avg('rating'))['avg']
         return round(avg, 2) if avg is not None else 0.0
 
-    def get_reviews_count(self, obj):
+    def get_reviews_count(self, obj: Venue) -> int:
+        """Возвращает количество одобренных отзывов площадки."""
         return obj.reviews.filter(status='approved').count()
 
 
@@ -86,7 +91,8 @@ class VenueWriteSerializer(serializers.ModelSerializer):
             'min_booking_hours', 'cancellation_policy',
         ]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет, что минимальная вместимость не превышает максимальную."""
         cap_min = data.get('capacity_min', getattr(self.instance, 'capacity_min', None))
         cap_max = data.get('capacity_max', getattr(self.instance, 'capacity_max', None))
         if cap_min and cap_max and cap_min > cap_max:
@@ -95,7 +101,8 @@ class VenueWriteSerializer(serializers.ModelSerializer):
             )
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Venue:
+        """Создаёт площадку от имени текущего владельца со статусом published."""
         request = self.context['request']
         owner   = request.user.owner
         return Venue.objects.create(owner=owner, status='published', **validated_data)

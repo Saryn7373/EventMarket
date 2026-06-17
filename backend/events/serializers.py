@@ -37,7 +37,8 @@ class EventDetailSerializer(serializers.ModelSerializer):
     is_upcoming    = serializers.BooleanField(read_only=True)
     is_today       = serializers.BooleanField(read_only=True)
 
-    def get_venues(self, obj):
+    def get_venues(self, obj: Event) -> list[dict]:
+        """Возвращает список площадок мероприятия по активным (не отменённым) бронированиям"""
         result = []
         for booking in obj.bookings.exclude(status='cancelled').select_related('venue').order_by('created_at'):
             v = booking.venue
@@ -53,7 +54,8 @@ class EventDetailSerializer(serializers.ModelSerializer):
             })
         return result
 
-    def get_specialists(self, obj):
+    def get_specialists(self, obj: Event) -> list[dict]:
+        """Возвращает список специалистов мероприятия по активным (не отменённым) найму"""
         result = []
         for hire in obj.hires.exclude(status='cancelled').select_related('specialist__user').order_by('created_at'):
             s = hire.specialist
@@ -97,7 +99,8 @@ class EventWriteSerializer(serializers.ModelSerializer):
             'expected_guests', 'status',
         ]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет порядок времени начала/окончания и положительность числа гостей"""
         start_time = data.get('start_time', getattr(self.instance, 'start_time', None))
         end_time = data.get('end_time', getattr(self.instance, 'end_time', None))
 
@@ -114,7 +117,8 @@ class EventWriteSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Event:
+        """Создаёт мероприятие от имени текущего арендатора"""
         request = self.context['request']
         renter = request.user.renter
         return Event.objects.create(renter=renter, **validated_data)
@@ -124,7 +128,8 @@ class EventStatusSerializer(serializers.Serializer):
     """Для изменения статуса мероприятия"""
     status = serializers.ChoiceField(choices=Event.STATUS_CHOICES)
 
-    def validate_status(self, new_status):
+    def validate_status(self, new_status: str) -> str:
+        """Проверяет, что переход статуса допустим по конечному автомату мероприятия"""
         event = self.context['event']
         valid_transitions = {
             'draft': ['planned', 'cancelled'],
@@ -143,7 +148,8 @@ class EventStatusSerializer(serializers.Serializer):
             )
         return new_status
 
-    def save(self):
+    def save(self) -> Event:
+        """Сохраняет новый статус мероприятия"""
         event = self.context['event']
         event.status = self.validated_data['status']
         event.save(update_fields=['status', 'updated_at'])

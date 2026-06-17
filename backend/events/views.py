@@ -1,5 +1,7 @@
+from django.db.models import QuerySet
 from rest_framework import generics, filters, status
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -26,23 +28,27 @@ class EventListCreateView(generics.ListCreateAPIView):
     ordering_fields = ['date', 'expected_guests', 'created_at', 'updated_at']
     ordering = ['-created_at']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Event]:
+        """Арендатор видит все мероприятия, остальные — только публично видимые статусы"""
         user = self.request.user
         if user.is_authenticated and hasattr(user, 'renter'):
             return Event.objects.select_related('renter__user').prefetch_related('venues', 'specialists')
         return Event.objects.filter(status__in=['planned', 'active', 'ongoing']).select_related('renter__user')
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор записи для POST, иначе сериализатор списка"""
         if self.request.method == 'POST':
             return EventWriteSerializer
         return EventListSerializer
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Создавать мероприятие может только Renter, читать список — любой"""
         if self.request.method == 'POST':
             return [IsRenter()]
         return [IsAuthenticatedOrReadOnly()]
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Создаёт мероприятие и возвращает его детальное представление"""
         serializer = self.get_serializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         event = serializer.save()
@@ -58,15 +64,18 @@ class EventRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     """
     permission_classes = [IsAuthenticatedOrReadOnly, IsEventOwner]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Event]:
+        """Возвращает мероприятия с предзагруженными связанными площадками и специалистами"""
         return Event.objects.select_related('renter__user').prefetch_related('venues', 'specialists')
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор записи для PUT/PATCH, иначе детальный сериализатор"""
         if self.request.method in ('PUT', 'PATCH'):
             return EventWriteSerializer
         return EventDetailSerializer
 
-    def retrieve(self, request, *args, **kwargs):
+    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+        """Возвращает мероприятие, предварительно авто-завершая его, если оно уже прошло"""
         from django.utils import timezone
         from datetime import datetime, time as dt_time
 
@@ -84,7 +93,8 @@ class EventRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    def update(self, request, *args, **kwargs):
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        """Обновляет мероприятие и возвращает его детальное представление"""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(
@@ -94,7 +104,8 @@ class EventRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         event = serializer.save()
         return Response(EventDetailSerializer(event).data)
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
+        """Запрещает удаление мероприятия с активными бронированиями, иначе помечает его отменённым"""
         event = self.get_object()
         has_active_bookings = event.bookings.filter(
             status__in=['pending', 'confirmed']
@@ -121,7 +132,8 @@ class MyEventsView(generics.ListAPIView):
     ordering_fields = ['date', 'expected_guests', 'created_at']
     ordering = ['-created_at']
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Event]:
+        """Возвращает мероприятия текущего арендатора"""
         return Event.objects.filter(
             renter=self.request.user.renter
         ).select_related('renter__user').prefetch_related('venues', 'specialists')
@@ -133,7 +145,8 @@ class EventStatusView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, pk):
+    def get_object(self, pk) -> Event:
+        """Возвращает мероприятие по pk с проверкой прав доступа объекта"""
         from django.shortcuts import get_object_or_404
         event = get_object_or_404(
             Event.objects.select_related('renter__user'),
@@ -142,7 +155,8 @@ class EventStatusView(APIView):
         self.check_object_permissions(self.request, event)
         return event
 
-    def patch(self, request, pk):
+    def patch(self, request: Request, pk) -> Response:
+        """Меняет статус мероприятия согласно конечному автомату переходов"""
         event = self.get_object(pk)
         serializer = EventStatusSerializer(
             data=request.data,

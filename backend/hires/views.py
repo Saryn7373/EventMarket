@@ -1,5 +1,7 @@
+from django.db.models import QuerySet
 from rest_framework import generics, filters, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
@@ -30,7 +32,8 @@ class HireListCreateView(generics.ListCreateAPIView):
     ordering_fields = ["start_datetime", "total_price", "created_at"]
     ordering = ["-created_at"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Hire]:
+        """Возвращает наймы текущего пользователя: по своим мероприятиям — для Renter, свои — для Specialist."""
         user = self.request.user
         qs = Hire.objects.select_related("event__renter__user", "specialist__user")
 
@@ -48,17 +51,20 @@ class HireListCreateView(generics.ListCreateAPIView):
 
         return qs.none()
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор создания для POST, иначе сериализатор списка."""
         if self.request.method == "POST":
             return HireCreateSerializer
         return HireListSerializer
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Создавать найм может только Renter, читать список — любой авторизованный."""
         if self.request.method == "POST":
             return [IsRenter()]
         return [IsAuthenticated()]
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request: Request, *args, **kwargs) -> Response:
+        """Создаёт найм и возвращает его детальное представление."""
         serializer = HireCreateSerializer(
             data=request.data, context={"request": request}
         )
@@ -81,17 +87,20 @@ class HireRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     http_method_names = ["get", "patch", "delete", "head", "options"]
     queryset = Hire.objects.select_related("event__renter__user", "specialist__user")
 
-    def get_permissions(self):
+    def get_permissions(self) -> list[BasePermission]:
+        """Читать может любой участник найма, изменять — только при праве на модификацию."""
         if self.request.method == "GET":
             return [IsHireParticipant()]
         return [IsHireParticipant(), CanModifyHire()]
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> type:
+        """Возвращает сериализатор обновления для PATCH, иначе детальный сериализатор."""
         if self.request.method == "PATCH":
             return HireUpdateSerializer
         return HireDetailSerializer
 
-    def patch(self, request, *args, **kwargs):
+    def patch(self, request: Request, *args, **kwargs) -> Response:
+        """Обновляет даты найма и возвращает его детальное представление."""
         hire = self.get_object()
         serializer = HireUpdateSerializer(
             hire, data=request.data, partial=True, context={"request": request}
@@ -104,7 +113,8 @@ class HireRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
         return Response(HireDetailSerializer(updated).data)
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request: Request, *args, **kwargs) -> Response:
+        """Отменяет найм (статус cancelled), если он ещё pending; физическое удаление запрещено."""
         hire = self.get_object()
         if hire.status != "pending":
             return Response(
@@ -129,7 +139,8 @@ class HireStatusView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get_object(self, pk):
+    def get_object(self, pk) -> Hire:
+        """Возвращает найм по pk с проверкой прав доступа объекта."""
         hire = get_object_or_404(
             Hire.objects.select_related("event__renter__user", "specialist__user"),
             pk=pk,
@@ -137,7 +148,8 @@ class HireStatusView(APIView):
         self.check_object_permissions(self.request, hire)
         return hire
 
-    def patch(self, request, pk):
+    def patch(self, request: Request, pk) -> Response:
+        """Меняет статус найма согласно конечному автомату переходов."""
         hire = self.get_object(pk)
 
         with transaction.atomic():
@@ -171,7 +183,8 @@ class MyHiresView(generics.ListAPIView):
     ordering_fields = ["start_datetime", "total_price", "created_at"]
     ordering = ["-created_at"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Hire]:
+        """Возвращает наймы по мероприятиям текущего арендатора."""
         return Hire.objects.filter(
             event__renter=self.request.user.renter
         ).select_related("event__renter__user", "specialist__user")
@@ -190,7 +203,8 @@ class SpecialistHiresView(generics.ListAPIView):
     ordering_fields = ["start_datetime", "total_price", "created_at"]
     ordering = ["-created_at"]
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Hire]:
+        """Возвращает наймы текущего специалиста, либо все наймы для администратора."""
         user = self.request.user
         if hasattr(user, "specialist"):
             return Hire.objects.filter(
@@ -211,7 +225,8 @@ class SpecialistAvailabilityView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    def get(self, request, specialist_id):
+    def get(self, request: Request, specialist_id) -> Response:
+        """Возвращает занятые интервалы специалиста в заданном диапазоне дат."""
         from django.utils import timezone
         from users.models import Specialist
 

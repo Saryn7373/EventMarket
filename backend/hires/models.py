@@ -74,11 +74,11 @@ class Hire(models.Model):
             models.Index(fields=['event', 'specialist']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Найм {self.id} — {self.specialist} — {self.event.date}"
 
     @property
-    def duration_hours(self):
+    def duration_hours(self) -> int | None:
         """Примерное количество часов работы"""
         if self.start_datetime and self.end_datetime:
             delta = self.end_datetime - self.start_datetime

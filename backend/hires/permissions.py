@@ -1,4 +1,6 @@
 from rest_framework.permissions import BasePermission
+from rest_framework.request import Request
+from rest_framework.views import APIView
 
 
 class IsHireParticipant(BasePermission):
@@ -7,7 +9,7 @@ class IsHireParticipant(BasePermission):
     (арендатор мероприятия ИЛИ специалист).
     """
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request: Request, view: APIView, obj) -> bool:
         is_renter = hasattr(request.user, "renter") and obj.event.renter == request.user.renter
         is_specialist = hasattr(request.user, "specialist") and obj.specialist == request.user.specialist
         is_admin = request.user.is_staff
@@ -23,7 +25,7 @@ class CanModifyHire(BasePermission):
     - Specialist может изменять свои наймы (пока pending)
     """
 
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(self, request: Request, view: APIView, obj) -> bool:
         is_renter = hasattr(request.user, "renter") and obj.event.renter == request.user.renter
         is_specialist = hasattr(request.user, "specialist") and obj.specialist == request.user.specialist
 
@@ -39,7 +41,7 @@ class IsRenter(BasePermission):
     Проверка: пользователь имеет роль Renter
     """
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: APIView) -> bool:
         return hasattr(request.user, "renter")
 
 
@@ -48,5 +50,5 @@ class IsSpecialist(BasePermission):
     Проверка: пользователь имеет роль Specialist
     """
 
-    def has_permission(self, request, view):
+    def has_permission(self, request: Request, view: APIView) -> bool:
         return hasattr(request.user, "specialist")

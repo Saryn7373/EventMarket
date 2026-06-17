@@ -1,3 +1,4 @@
+from django.db.models import QuerySet
 import django_filters
 from .models import Venue
 
@@ -34,7 +35,8 @@ class VenueFilter(django_filters.FilterSet):
 
     # ── Фильтрация по доступности ────────────────────────────────────────────
 
-    def _apply_availability(self, queryset):
+    def _apply_availability(self, queryset: QuerySet[Venue]) -> QuerySet[Venue]:
+        """Исключает площадки с пересекающимися активными бронями в заданном диапазоне дат."""
         from_str = self.data.get('available_from')
         to_str   = self.data.get('available_to')
         if not from_str or not to_str:
@@ -62,8 +64,10 @@ class VenueFilter(django_filters.FilterSet):
 
         return queryset.exclude(id__in=busy_ids)
 
-    def filter_available_from(self, queryset, name, value):
+    def filter_available_from(self, queryset: QuerySet[Venue], name: str, value: str) -> QuerySet[Venue]:
+        """Делегирует фильтрацию доступности — оба конца диапазона обрабатываются совместно."""
         return self._apply_availability(queryset)
 
-    def filter_available_to(self, queryset, name, value):
+    def filter_available_to(self, queryset: QuerySet[Venue], name: str, value: str) -> QuerySet[Venue]:
+        """Делегирует фильтрацию доступности — оба конца диапазона обрабатываются совместно."""
         return self._apply_availability(queryset)

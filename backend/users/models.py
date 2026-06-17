@@ -4,7 +4,8 @@ from django.utils.translation import gettext_lazy as _
 import uuid
 
 class BaseUserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email: str, password: str | None = None, **extra_fields) -> "BaseUser":
+        """Создаёт пользователя с нормализованным email и хэшированным паролем."""
         if not email:
             raise ValueError(_("Email обязателен"))
         email = self.normalize_email(email)
@@ -13,7 +14,8 @@ class BaseUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
+    def create_superuser(self, email: str, password: str | None = None, **extra_fields) -> "BaseUser":
+        """Создаёт суперпользователя, принудительно выставляя is_staff и is_superuser."""
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('is_active', True)
@@ -53,25 +55,26 @@ class BaseUser(AbstractBaseUser, PermissionsMixin):
 
     # Удобные свойства для проверки ролей
     @property
-    def is_renter(self):
+    def is_renter(self) -> bool:
         return hasattr(self, 'renter')
 
     @property
-    def is_owner(self):
+    def is_owner(self) -> bool:
         return hasattr(self, 'owner')
 
     @property
-    def is_specialist(self):
+    def is_specialist(self) -> bool:
         return hasattr(self, 'specialist')
 
     @property
-    def is_admin(self):
+    def is_admin(self) -> bool:
         # Администратором считается пользователь с профилем Admin
         # либо суперпользователь Django.
         return hasattr(self, 'admin') or self.is_superuser
 
     @property
-    def role(self):
+    def role(self) -> str:
+        """Возвращает человекочитаемое название роли пользователя для отображения."""
         if self.is_admin:      return "Администратор"
         if self.is_renter:     return "Арендатор"
         if self.is_owner:      return "Владелец"

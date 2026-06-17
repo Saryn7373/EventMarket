@@ -14,7 +14,8 @@ class _RenterShortSerializer(serializers.Serializer):
     last_name = serializers.CharField(source="user.last_name")
     avatar = serializers.SerializerMethodField()
 
-    def get_avatar(self, obj):
+    def get_avatar(self, obj) -> str | None:
+        """Возвращает абсолютный URL аватара арендатора или None, если его нет."""
         try:
             request = self.context.get("request")
             url = obj.user.avatar.image.url
@@ -50,13 +51,15 @@ class VenueReviewCreateSerializer(serializers.ModelSerializer):
         model = VenueReview
         fields = ["rating", "comment"]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет, что арендатор имеет право оставить отзыв об этой площадке."""
         renter = self.context["request"].user.renter
         venue = self.context["venue"]
         validate_can_review_venue(renter, venue)
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> VenueReview:
+        """Создаёт отзыв или обновляет существующий (один отзыв на площадку от арендатора)."""
         renter = self.context["request"].user.renter
         venue = self.context["venue"]
         # Новый/изменённый отзыв снова уходит на проверку администратору.
@@ -94,13 +97,15 @@ class SpecialistReviewCreateSerializer(serializers.ModelSerializer):
         model = SpecialistReview
         fields = ["rating", "comment"]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет, что арендатор имеет право оставить отзыв об этом специалисте."""
         renter = self.context["request"].user.renter
         specialist = self.context["specialist"]
         validate_can_review_specialist(renter, specialist)
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> SpecialistReview:
+        """Создаёт отзыв или обновляет существующий (один отзыв на специалиста от арендатора)."""
         renter = self.context["request"].user.renter
         specialist = self.context["specialist"]
         # Новый/изменённый отзыв снова уходит на проверку администратору.
@@ -133,21 +138,25 @@ class AdminReviewSerializer(serializers.Serializer):
     status = serializers.CharField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
 
-    def get_type(self, obj):
+    def get_type(self, obj) -> str:
+        """Определяет тип отзыва по классу модели."""
         return "venue" if isinstance(obj, VenueReview) else "specialist"
 
-    def get_target(self, obj):
+    def get_target(self, obj) -> str:
+        """Возвращает человекочитаемое название объекта отзыва — площадки или специалиста."""
         if isinstance(obj, VenueReview):
             return obj.venue.name
         name = f"{obj.specialist.user.first_name} {obj.specialist.user.last_name}".strip()
         return name or obj.specialist.user.email
 
-    def get_target_id(self, obj):
+    def get_target_id(self, obj) -> str:
+        """Возвращает id площадки или специалиста, к которому относится отзыв."""
         if isinstance(obj, VenueReview):
             return str(obj.venue_id)
         return str(obj.specialist_id)
 
-    def get_author(self, obj):
+    def get_author(self, obj) -> str:
+        """Возвращает имя автора отзыва или email, если имя не указано."""
         name = f"{obj.renter.user.first_name} {obj.renter.user.last_name}".strip()
         return name or obj.renter.user.email
 

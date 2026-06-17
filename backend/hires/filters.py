@@ -1,3 +1,5 @@
+from django.db.models import QuerySet
+
 import django_filters
 from .models import Hire
 
@@ -49,7 +51,8 @@ class HireFilter(django_filters.FilterSet):
         model = Hire
         fields = ["status", "specialist", "event"]
 
-    def filter_upcoming(self, queryset, name, value):
+    def filter_upcoming(self, queryset: QuerySet[Hire], name: str, value: bool) -> QuerySet[Hire]:
+        """Фильтрует только предстоящие наймы, если флаг установлен."""
         from django.utils import timezone
 
         if value:

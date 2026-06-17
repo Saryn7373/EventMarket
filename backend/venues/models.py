@@ -5,7 +5,8 @@ from django.conf import settings
 from autoslug import AutoSlugField
 import uuid
 
-def venue_slugify(value):
+def venue_slugify(value: str) -> str:
+    """Формирует slug из названия площадки: нижний регистр и дефисы вместо пробелов."""
     return value.lower().replace(' ', '-')
 
 class Venue(models.Model):
@@ -149,15 +150,17 @@ class Venue(models.Model):
             models.Index(fields=['owner']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.city})"
 
-    def get_absolute_url(self):
+    def get_absolute_url(self) -> str:
+        """Возвращает URL детальной страницы площадки по её slug."""
         from django.urls import reverse
         return reverse('venues:detail', kwargs={'slug': self.slug})
 
     @property
-    def main_photo(self):
+    def main_photo(self) -> str | None:
+        """Возвращает URL первой по порядку фотографии площадки или None, если фото нет."""
         photo = self.images.order_by('order', '-created_at').first()
         return photo.image.url if photo else None
 

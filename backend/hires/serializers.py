@@ -58,7 +58,8 @@ class HireListSerializer(serializers.ModelSerializer):
             "created_at",
         ]
 
-    def get_specialist_name(self, obj):
+    def get_specialist_name(self, obj: Hire) -> str:
+        """Возвращает полное имя специалиста."""
         return f"{obj.specialist.user.first_name} {obj.specialist.user.last_name}".strip()
 
 
@@ -107,13 +108,15 @@ class HireCreateSerializer(serializers.ModelSerializer):
         fields = ["specialist", "event", "start_datetime", "end_datetime"]
 
     def validate_specialist(self, user_id):
+        """Преобразует переданный user_id специалиста в объект Specialist."""
         from users.models import Specialist as SpecialistModel
         try:
             return SpecialistModel.objects.get(user_id=user_id)
         except SpecialistModel.DoesNotExist:
             raise serializers.ValidationError("Специалист не найден.")
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет даты, принадлежность мероприятия арендатору и доступность специалиста."""
         from .validators import (
             validate_hire_datetimes,
             validate_event_belongs_to_renter,
@@ -140,7 +143,8 @@ class HireCreateSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Hire:
+        """Создаёт найм внутри транзакции с блокировкой конкурирующих строк специалиста."""
         from django.db import transaction
         from .validators import calculate_hire_price
 
@@ -169,7 +173,8 @@ class HireUpdateSerializer(serializers.ModelSerializer):
         model = Hire
         fields = ["start_datetime", "end_datetime"]
 
-    def validate(self, data):
+    def validate(self, data: dict) -> dict:
+        """Проверяет новые даты найма и доступность специалиста на этот период."""
         from .validators import validate_hire_datetimes, validate_specialist_availability
 
         instance = self.instance
@@ -184,7 +189,8 @@ class HireUpdateSerializer(serializers.ModelSerializer):
 
         return data
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Hire, validated_data: dict) -> Hire:
+        """Обновляет даты найма и пересчитывает стоимость внутри транзакции."""
         from django.db import transaction
         from .validators import calculate_hire_price
 
@@ -217,7 +223,8 @@ class HireUpdateSerializer(serializers.ModelSerializer):
 class HireStatusSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Hire.STATUS_CHOICES)
 
-    def validate_status(self, new_status):
+    def validate_status(self, new_status: str) -> str:
+        """Проверяет допустимость перехода статуса по конечному автомату."""
         from .validators import validate_status_transition
 
         hire = self.context["hire"]
@@ -225,7 +232,8 @@ class HireStatusSerializer(serializers.Serializer):
 
         return new_status
 
-    def save(self):
+    def save(self) -> Hire:
+        """Сохраняет новый статус найма."""
         hire = self.context["hire"]
         hire.status = self.validated_data["status"]
         hire.save(update_fields=["status", "updated_at"])

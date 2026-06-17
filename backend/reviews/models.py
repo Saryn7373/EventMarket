@@ -66,7 +66,7 @@ class VenueReview(models.Model):
             ),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Отзыв {self.renter.user.email} о «{self.venue.name}» — {self.rating}/5"
 
 
@@ -125,6 +125,6 @@ class SpecialistReview(models.Model):
             ),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         name = f"{self.specialist.user.first_name} {self.specialist.user.last_name}".strip()
         return f"Отзыв {self.renter.user.email} о {name or self.specialist.user.email} — {self.rating}/5"

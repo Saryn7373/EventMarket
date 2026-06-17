@@ -70,11 +70,11 @@ class Booking(models.Model):
             models.Index(fields=['event', 'venue']),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Бронь {str(self.id)[:8]} — {self.venue.name} ({self.event.date}) [{self.status}]"
 
     @property
-    def duration_hours(self):
+    def duration_hours(self) -> int | None:
         """Примерное количество часов (можно использовать для расчётов)"""
         if self.start_datetime and self.end_datetime:
             delta = self.end_datetime - self.start_datetime

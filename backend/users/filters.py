@@ -1,4 +1,6 @@
 import django_filters
+from django.db.models import QuerySet
+
 from .models import Specialist
 
 
@@ -14,7 +16,8 @@ class SpecialistFilter(django_filters.FilterSet):
         model  = Specialist
         fields = ['rating_min', 'available_from', 'available_to']
 
-    def _apply_availability(self, queryset):
+    def _apply_availability(self, queryset: QuerySet[Specialist]) -> QuerySet[Specialist]:
+        """Исключает специалистов с пересекающимися активными наймами в заданном диапазоне."""
         from_str = self.data.get('available_from')
         to_str   = self.data.get('available_to')
         if not from_str or not to_str:
@@ -42,8 +45,10 @@ class SpecialistFilter(django_filters.FilterSet):
 
         return queryset.exclude(user__id__in=busy_ids)
 
-    def filter_available_from(self, queryset, name, value):
+    def filter_available_from(self, queryset: QuerySet[Specialist], name: str, value: str) -> QuerySet[Specialist]:
+        """Применяет проверку доступности по нижней границе диапазона дат."""
         return self._apply_availability(queryset)
 
-    def filter_available_to(self, queryset, name, value):
+    def filter_available_to(self, queryset: QuerySet[Specialist], name: str, value: str) -> QuerySet[Specialist]:
+        """Применяет проверку доступности по верхней границе диапазона дат."""
         return self._apply_availability(queryset)
